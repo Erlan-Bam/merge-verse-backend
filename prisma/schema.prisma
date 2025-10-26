@@ -40,7 +40,7 @@ enum Level {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
+  id         String   @id @default(uuid())
   telegramId String   @unique
   role       Role     @default(USER)
   balance    Float    @default(0)
@@ -54,7 +54,7 @@ model User {
 }
 
 model Gift {
-  id        Int         @id @default(autoincrement())
+  id        String      @id @default(uuid())
   name      String      @unique
   rarity    Rarity
   url       String
@@ -66,9 +66,9 @@ model Gift {
 }
 
 model Item {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  giftId     Int
+  id         String   @id @default(uuid())
+  userId     String
+  giftId     String
   level      Level
   quantity   Int
   isTradable Boolean
