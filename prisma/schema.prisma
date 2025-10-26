@@ -63,7 +63,6 @@ model Gift {
   updatedAt DateTime    @updatedAt
 
   inventory Item[]
-  prices    Price[]
 }
 
 model Item {
@@ -90,13 +89,9 @@ model Price {
   rarity    Rarity
   level     Level
   value     Float
-  giftId    Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  gift      Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-
-  @@index([giftId])
   @@unique([rarity, level])
 }
