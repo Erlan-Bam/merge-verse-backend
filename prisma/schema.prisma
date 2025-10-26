@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Rarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum Level {
+  L1
+  L2
+  L3
+  L4
+  L5
+  L6
+  L7
+  L8
+  L9
+  L10
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  telegramId String   @unique
+  role       Role     @default(USER)
+  balance    Float    @default(0)
+  streak     Int      @default(1)
+  isBanned   Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  inventory  Item[]
+}
+
+model Gift {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  rarity    Rarity
+  url       String
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  inventory Item[]
+  prices    Price[]
+}
+
+model Item {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  giftId     Int
+  level      Level
+  quantity   Int
+  isTradable Boolean
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, giftId])
+  @@index([userId])
+  @@index([giftId])
+}
+
+model Price {
+  id        Int      @id @default(autoincrement())
+  rarity    Rarity
+  level     Level
+  value     Float
+  giftId    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gift      Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@index([giftId])
+  @@unique([rarity, level])
+}

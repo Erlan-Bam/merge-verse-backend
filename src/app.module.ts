@@ -1,0 +1,32 @@
+import { Module } from '@nestjs/common';
+import { SharedModule } from './shared/shared.module';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { GiftModule } from './gift/gift.module';
+import { UserModule } from './user/user.module';
+import * as Joi from 'joi';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      expandVariables: true,
+      envFilePath: ['.env'],
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'test', 'production')
+          .default('development'),
+        PORT: Joi.number().default(6001),
+        DATABASE_URL: Joi.string().uri().required(),
+        WEBAPP_URL: Joi.string().uri().required(),
+      }),
+      validationOptions: { allowUnknown: true, abortEarly: true },
+    }),
+    ScheduleModule.forRoot(),
+    SharedModule,
+    GiftModule,
+    UserModule,
+  ],
+})
+export class AppModule {}
