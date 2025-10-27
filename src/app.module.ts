@@ -21,6 +21,7 @@ import * as Joi from 'joi';
         PORT: Joi.number().default(6001),
         DATABASE_URL: Joi.string().uri().required(),
         WEBAPP_URL: Joi.string().uri().required(),
+        JWT_SECRET: Joi.string().min(10).required(),
       }),
       validationOptions: { allowUnknown: true, abortEarly: true },
     }),
