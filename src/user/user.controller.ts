@@ -37,4 +37,9 @@ export class UserController {
       throw error;
     }
   }
+
+  @Post('test')
+  async test() {
+    return this.userService.generateToken('');
+  }
 }

@@ -7,13 +7,17 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot, InlineKeyboard } from 'grammy';
+import { PrismaService } from './prisma.service';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name);
   private bot: Bot;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {
     const token = this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
     this.bot = new Bot(token);
 
@@ -46,10 +50,19 @@ Dive into an exciting world of merging and strategy!
 Click the button below to launch the game!
       `.trim();
 
-      await ctx.reply(welcomeMessage, {
-        reply_markup: keyboard,
-        parse_mode: 'Markdown',
-      });
+      const telegramId = ctx.from.id;
+
+      await Promise.all([
+        await this.prisma.user.upsert({
+          where: { telegramId: telegramId.toString() },
+          update: {},
+          create: { telegramId: telegramId.toString() },
+        }),
+        await ctx.reply(welcomeMessage, {
+          reply_markup: keyboard,
+          parse_mode: 'Markdown',
+        }),
+      ]);
     });
   }
 
