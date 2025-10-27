@@ -12,12 +12,12 @@ import { ConfigService } from '@nestjs/config';
     JwtModule.registerAsync({
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '30d' },
+        signOptions: { expiresIn: '12h' },
       }),
       inject: [ConfigService],
     }),
   ],
-  providers: [PrismaService, BotService, CronService, JwtStrategy, JwtService],
-  exports: [PrismaService, BotService, CronService, JwtStrategy, JwtService],
+  providers: [PrismaService, BotService, CronService, JwtStrategy],
+  exports: [PrismaService, BotService, CronService, JwtStrategy, JwtModule],
 })
 export class SharedModule {}
