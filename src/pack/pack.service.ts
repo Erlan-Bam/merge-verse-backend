@@ -78,9 +78,13 @@ export class PackService {
 
       return { pack: pack };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       this.logger.log(
         `Error in getting free pack for user ${userId}: ${error.message}`,
       );
+      throw new HttpException('Internal server error', 500);
     }
   }
 }
