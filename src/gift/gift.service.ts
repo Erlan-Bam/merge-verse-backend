@@ -43,4 +43,18 @@ export class GiftService {
 
     return this.getRandomItems(giftsByRarity, query.amount);
   }
+
+  async getUserGifts(userId: string) {
+    try {
+      const collection = await this.prisma.item.findMany({
+        where: { userId: userId },
+      });
+
+      return collection;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to get user gifts: ', error);
+      throw error;
+    }
+  }
 }

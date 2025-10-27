@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { GiftModule } from './gift/gift.module';
 import { UserModule } from './user/user.module';
 import { PackModule } from './pack/pack.module';
+import { CollectionModule } from './collection/collection.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -30,6 +31,7 @@ import * as Joi from 'joi';
     GiftModule,
     UserModule,
     PackModule,
+    CollectionModule,
   ],
 })
 export class AppModule {}

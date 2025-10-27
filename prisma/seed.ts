@@ -114,118 +114,91 @@ const gifts = [
   },
 ];
 
-const priceData = [
-  // L1
-  { rarity: Rarity.COMMON, level: Level.L1, value: 0.034 },
-  { rarity: Rarity.RARE, level: Level.L1, value: 0.066 },
-  { rarity: Rarity.EPIC, level: Level.L1, value: 0.194 },
-  { rarity: Rarity.LEGENDARY, level: Level.L1, value: 0.709 },
-  { rarity: Rarity.MYTHIC, level: Level.L1, value: 3.127 },
+// Vertical prices - rewards for merging vertically (levels L1-L10)
+const verticalPrices = [
+  { level: Level.L1, price: 0.6 },
+  { level: Level.L2, price: 1.2 },
+  { level: Level.L3, price: 2.3 },
+  { level: Level.L4, price: 4.6 },
+  { level: Level.L5, price: 9.3 },
+  { level: Level.L6, price: 18.6 },
+  { level: Level.L7, price: 37.3 },
+  { level: Level.L8, price: 74.6 },
+  { level: Level.L9, price: 149.2 },
+  { level: Level.L10, price: 298.3 },
+];
 
-  // L2
-  { rarity: Rarity.COMMON, level: Level.L2, value: 0.068 },
-  { rarity: Rarity.RARE, level: Level.L2, value: 0.132 },
-  { rarity: Rarity.EPIC, level: Level.L2, value: 0.388 },
-  { rarity: Rarity.LEGENDARY, level: Level.L2, value: 1.418 },
-  { rarity: Rarity.MYTHIC, level: Level.L2, value: 6.254 },
+// Horizontal prices - rewards for completing full path L1-L10 for each gift
+const horizontalPrices = [
+  // Common gifts
+  { name: 'Sharp Tongue', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Westside Sign', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Scared Cat', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Genie Lamp', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Bonded Ring', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Gem Signet', rarity: Rarity.COMMON, price: 1.7 },
+  { name: 'Magic Potion', rarity: Rarity.COMMON, price: 1.7 },
 
-  // L3
-  { rarity: Rarity.COMMON, level: Level.L3, value: 0.136 },
-  { rarity: Rarity.RARE, level: Level.L3, value: 0.264 },
-  { rarity: Rarity.EPIC, level: Level.L3, value: 0.776 },
-  { rarity: Rarity.LEGENDARY, level: Level.L3, value: 2.836 },
-  { rarity: Rarity.MYTHIC, level: Level.L3, value: 12.508 },
+  // Rare gifts
+  { name: 'Ion Gem', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Mini Oscar', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Perfume Bottle', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Loot Bag', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Astral Shard', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Nail Bracelet', rarity: Rarity.RARE, price: 3.4 },
+  { name: 'Artisan Brick', rarity: Rarity.RARE, price: 3.4 },
 
-  // L4
-  { rarity: Rarity.COMMON, level: Level.L4, value: 0.272 },
-  { rarity: Rarity.RARE, level: Level.L4, value: 0.528 },
-  { rarity: Rarity.EPIC, level: Level.L4, value: 1.552 },
-  { rarity: Rarity.LEGENDARY, level: Level.L4, value: 5.672 },
-  { rarity: Rarity.MYTHIC, level: Level.L4, value: 25.016 },
+  // Epic gifts
+  { name: 'Heroic Helmet', rarity: Rarity.EPIC, price: 9.9 },
+  { name: 'Mighty Arm', rarity: Rarity.EPIC, price: 9.9 },
+  { name: 'Precious Peach', rarity: Rarity.EPIC, price: 9.9 },
 
-  // L5
-  { rarity: Rarity.COMMON, level: Level.L5, value: 0.544 },
-  { rarity: Rarity.RARE, level: Level.L5, value: 1.056 },
-  { rarity: Rarity.EPIC, level: Level.L5, value: 3.104 },
-  { rarity: Rarity.LEGENDARY, level: Level.L5, value: 11.344 },
-  { rarity: Rarity.MYTHIC, level: Level.L5, value: 50.032 },
+  // Legendary gifts
+  { name: "Durov's Cap", rarity: Rarity.LEGENDARY, price: 36.3 },
+  { name: 'Heart Locket', rarity: Rarity.LEGENDARY, price: 36.3 },
 
-  // L6
-  { rarity: Rarity.COMMON, level: Level.L6, value: 1.088 },
-  { rarity: Rarity.RARE, level: Level.L6, value: 2.112 },
-  { rarity: Rarity.EPIC, level: Level.L6, value: 6.208 },
-  { rarity: Rarity.LEGENDARY, level: Level.L6, value: 22.688 },
-  { rarity: Rarity.MYTHIC, level: Level.L6, value: 100.064 },
-
-  // L7
-  { rarity: Rarity.COMMON, level: Level.L7, value: 2.176 },
-  { rarity: Rarity.RARE, level: Level.L7, value: 4.224 },
-  { rarity: Rarity.EPIC, level: Level.L7, value: 12.416 },
-  { rarity: Rarity.LEGENDARY, level: Level.L7, value: 45.376 },
-  { rarity: Rarity.MYTHIC, level: Level.L7, value: 200.128 },
-
-  // L8
-  { rarity: Rarity.COMMON, level: Level.L8, value: 4.352 },
-  { rarity: Rarity.RARE, level: Level.L8, value: 8.448 },
-  { rarity: Rarity.EPIC, level: Level.L8, value: 24.832 },
-  { rarity: Rarity.LEGENDARY, level: Level.L8, value: 90.752 },
-  { rarity: Rarity.MYTHIC, level: Level.L8, value: 400.256 },
-
-  // L9
-  { rarity: Rarity.COMMON, level: Level.L9, value: 8.704 },
-  { rarity: Rarity.RARE, level: Level.L9, value: 16.896 },
-  { rarity: Rarity.EPIC, level: Level.L9, value: 49.664 },
-  { rarity: Rarity.LEGENDARY, level: Level.L9, value: 181.504 },
-  { rarity: Rarity.MYTHIC, level: Level.L9, value: 800.512 },
-
-  // L10
-  { rarity: Rarity.COMMON, level: Level.L10, value: 17.408 },
-  { rarity: Rarity.RARE, level: Level.L10, value: 33.792 },
-  { rarity: Rarity.EPIC, level: Level.L10, value: 99.328 },
-  { rarity: Rarity.LEGENDARY, level: Level.L10, value: 363.008 },
-  { rarity: Rarity.MYTHIC, level: Level.L10, value: 1601.024 },
+  // Mythic gift
+  { name: 'Plush Pepe', rarity: Rarity.MYTHIC, price: 160.1 },
 ];
 
 async function main() {
-  // console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding database...');
 
-  // // Clear existing data
-  // console.log('🗑️  Clearing existing data...');
-  // await prisma.price.deleteMany();
-  // await prisma.item.deleteMany();
-  // await prisma.gift.deleteMany();
-  // await prisma.user.deleteMany();
+  // Clear existing price data
+  console.log('🗑️  Clearing existing price data...');
+  await prisma.horizontalPrice.deleteMany();
+  await prisma.verticalPrice.deleteMany();
 
-  // // Create gifts
-  // console.log('🎁 Creating gifts...');
-  // const createdGifts = await Promise.all(
-  //   gifts.map((gift) =>
-  //     prisma.gift.create({
-  //       data: gift,
-  //     }),
-  //   ),
-  // );
-  // console.log(`✅ Created ${createdGifts.length} gifts`);
+  // Create vertical prices
+  console.log('📊 Creating vertical prices...');
+  const createdVerticalPrices = await Promise.all(
+    verticalPrices.map((price) =>
+      prisma.verticalPrice.create({
+        data: {
+          level: price.level,
+          price: price.price,
+        },
+      }),
+    ),
+  );
+  console.log(`✅ Created ${createdVerticalPrices.length} vertical prices`);
 
-  // // Create prices
-  // console.log('💰 Creating prices...');
+  // Create horizontal prices
+  console.log('� Creating horizontal prices...');
+  const createdHorizontalPrices = await Promise.all(
+    horizontalPrices.map((price) =>
+      prisma.horizontalPrice.create({
+        data: {
+          name: price.name,
+          rarity: price.rarity,
+          price: price.price,
+        },
+      }),
+    ),
+  );
+  console.log(`✅ Created ${createdHorizontalPrices.length} horizontal prices`);
 
-  // const createdPrices = await Promise.all(
-  //   priceData.map((price) =>
-  //     prisma.price.create({
-  //       data: {
-  //         rarity: price.rarity,
-  //         level: price.level,
-  //         value: price.value,
-  //       },
-  //     }),
-  //   ),
-  // );
-  // console.log(`✅ Created ${createdPrices.length} prices`);
-
-  // console.log('✨ Seeding completed successfully!');
-
-  await prisma.user.updateMany({ data: { activeAt: null } });
+  console.log('✨ Seeding completed successfully!');
 }
 
 main()

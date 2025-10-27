@@ -86,14 +86,23 @@ model Item {
   @@index([giftId])
 }
 
-model Price {
-  id        Int      @id @default(autoincrement())
+model VerticalPrice {
+  id        String   @id @default(uuid())
+  level     Level    @unique
+  price     Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HorizontalPrice {
+  id        String   @id @default(uuid())
+  name      String
   rarity    Rarity
-  level     Level
-  value     Float
+  price     Float
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([rarity, level])
+  @@unique([name, rarity])
 }

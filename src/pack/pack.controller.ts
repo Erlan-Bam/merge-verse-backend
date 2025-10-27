@@ -1,8 +1,13 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { PackService } from './pack.service';
 import { User } from 'src/shared/decorator/user.decorator';
-import { Api } from 'grammy';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { BuyPackDto } from './dto/buy-pack.dto';
 
@@ -16,7 +21,8 @@ export class PackController {
   @Get('free')
   @ApiOperation({
     summary: 'Get free daily pack',
-    description: 'Claims a free daily pack for the authenticated user. Users get a daily pack, and every 7th day (streak) they receive a special streak pack. Can only be claimed once per day.',
+    description:
+      'Claims a free daily pack for the authenticated user. Users get a daily pack, and every 7th day (streak) they receive a special streak pack. Can only be claimed once per day.',
   })
   @ApiResponse({
     status: 200,
@@ -32,7 +38,11 @@ export class PackController {
             properties: {
               id: { type: 'string', description: 'Gift ID' },
               name: { type: 'string', description: 'Gift name' },
-              rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'], description: 'Gift rarity' },
+              rarity: {
+                type: 'string',
+                enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                description: 'Gift rarity',
+              },
               url: { type: 'string', description: 'Gift image URL' },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
@@ -61,7 +71,8 @@ export class PackController {
   @Get('paid')
   @ApiOperation({
     summary: 'Get available paid packs',
-    description: 'Retrieves a list of all purchasable packs with their prices, configurations, and composition details.',
+    description:
+      'Retrieves a list of all purchasable packs with their prices, configurations, and composition details.',
   })
   @ApiResponse({
     status: 200,
@@ -71,11 +82,37 @@ export class PackController {
       items: {
         type: 'object',
         properties: {
-          type: { type: 'string', enum: ['COMMON_PACK', 'RARE_PACK', 'EPIC_PACK', 'LEGENDARY_PACK'], description: 'Pack type' },
+          type: {
+            type: 'string',
+            enum: ['COMMON_PACK', 'RARE_PACK', 'EPIC_PACK', 'LEGENDARY_PACK'],
+            description: 'Pack type',
+          },
           price: { type: 'number', description: 'Pack price in game currency' },
-          level: { type: 'string', enum: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'], description: 'Item level' },
-          total: { type: 'number', description: 'Total number of items in pack' },
-          tradeable: { type: 'boolean', description: 'Whether items are tradeable' },
+          level: {
+            type: 'string',
+            enum: [
+              'L0',
+              'L1',
+              'L2',
+              'L3',
+              'L4',
+              'L5',
+              'L6',
+              'L7',
+              'L8',
+              'L9',
+              'L10',
+            ],
+            description: 'Item level',
+          },
+          total: {
+            type: 'number',
+            description: 'Total number of items in pack',
+          },
+          tradeable: {
+            type: 'boolean',
+            description: 'Whether items are tradeable',
+          },
           composition: {
             type: 'object',
             description: 'Pack composition by rarity',
@@ -96,7 +133,8 @@ export class PackController {
   @Post('buy')
   @ApiOperation({
     summary: 'Buy a pack',
-    description: 'Purchase a pack using the user\'s balance. Deducts the pack price from balance and adds the items to the user\'s inventory.',
+    description:
+      "Purchase a pack using the user's balance. Deducts the pack price from balance and adds the items to the user's inventory.",
   })
   @ApiBody({ type: BuyPackDto })
   @ApiResponse({
@@ -113,7 +151,11 @@ export class PackController {
             properties: {
               id: { type: 'string', description: 'Gift ID' },
               name: { type: 'string', description: 'Gift name' },
-              rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'], description: 'Gift rarity' },
+              rarity: {
+                type: 'string',
+                enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                description: 'Gift rarity',
+              },
               url: { type: 'string', description: 'Gift image URL' },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
@@ -121,7 +163,10 @@ export class PackController {
           },
         },
         spent: { type: 'number', description: 'Amount spent on the pack' },
-        balance: { type: 'number', description: 'Remaining user balance after purchase' },
+        balance: {
+          type: 'number',
+          description: 'Remaining user balance after purchase',
+        },
       },
     },
   })
