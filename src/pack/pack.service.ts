@@ -48,9 +48,10 @@ export class PackService {
           pack.map((gift) =>
             tx.item.upsert({
               where: {
-                userId_giftId: {
+                userId_giftId_isTradeable: {
                   userId,
                   giftId: gift.id,
+                  isTradeable: config.tradeable,
                 },
               },
               create: {
@@ -118,9 +119,10 @@ export class PackService {
           pack.map((gift) =>
             tx.item.upsert({
               where: {
-                userId_giftId: {
+                userId_giftId_isTradeable: {
                   userId,
                   giftId: gift.id,
+                  isTradeable: config.tradeable,
                 },
               },
               create: {

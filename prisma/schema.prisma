@@ -81,7 +81,7 @@ model Item {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, giftId])
+  @@unique([userId, giftId, isTradeable])
   @@index([userId])
   @@index([giftId])
 }
