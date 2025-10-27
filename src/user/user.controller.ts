@@ -1,7 +1,8 @@
-import { Body, Controller, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TelegramAuthDto } from './dto/telegram-auth.dto';
+import { User } from 'src/shared/decorator/user.decorator';
 
 @Controller('user')
 export class UserController {

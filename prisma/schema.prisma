@@ -27,6 +27,7 @@ enum Rarity {
 }
 
 enum Level {
+  L0
   L1
   L2
   L3
@@ -44,9 +45,10 @@ model User {
   telegramId String   @unique
   role       Role     @default(USER)
   balance    Float    @default(0)
-  streak     Int      @default(1)
+  streak     Int      @default(0)
   isBanned   Boolean  @default(false)
 
+  activeAt   DateTime @default(now())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -71,7 +73,7 @@ model Item {
   giftId     String
   level      Level
   quantity   Int
-  isTradable Boolean
+  isTradeable Boolean
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

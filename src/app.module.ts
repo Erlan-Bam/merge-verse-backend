@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GiftModule } from './gift/gift.module';
 import { UserModule } from './user/user.module';
+import { PackModule } from './pack/pack.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -27,6 +28,7 @@ import * as Joi from 'joi';
     SharedModule,
     GiftModule,
     UserModule,
+    PackModule,
   ],
 })
 export class AppModule {}
