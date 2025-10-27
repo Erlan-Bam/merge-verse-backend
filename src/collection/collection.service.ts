@@ -91,7 +91,14 @@ export class CollectionService {
         });
       }
 
-      return result;
+      return {
+        result: {
+          ...result,
+          isFull:
+            result.vertical.every((v) => v.isComplete) &&
+            result.horizontal.every((h) => h.isComplete),
+        },
+      };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to check collection: ', error);
