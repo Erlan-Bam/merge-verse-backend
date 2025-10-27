@@ -103,7 +103,7 @@ export class PackService {
 
       const { pack, config } = await this.getPackByType(data.type as PackType);
 
-      if (user.balance < config.price) {
+      if (user.balance.toNumber() < config.price) {
         throw new HttpException('Insufficient balance', 400);
       }
 
@@ -143,7 +143,7 @@ export class PackService {
       return {
         pack: pack,
         spent: config.price,
-        balance: user.balance - config.price,
+        balance: user.balance.toNumber() - config.price,
       };
     } catch (error) {
       if (error instanceof HttpException) {

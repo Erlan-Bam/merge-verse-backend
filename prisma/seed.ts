@@ -164,41 +164,43 @@ const horizontalPrices = [
 async function main() {
   console.log('🌱 Seeding database...');
 
+  await prisma.item.deleteMany();
+
   // Clear existing price data
-  console.log('🗑️  Clearing existing price data...');
-  await prisma.horizontalPrice.deleteMany();
-  await prisma.verticalPrice.deleteMany();
+  // console.log('🗑️  Clearing existing price data...');
+  // await prisma.horizontalPrice.deleteMany();
+  // await prisma.verticalPrice.deleteMany();
 
-  // Create vertical prices
-  console.log('📊 Creating vertical prices...');
-  const createdVerticalPrices = await Promise.all(
-    verticalPrices.map((price) =>
-      prisma.verticalPrice.create({
-        data: {
-          level: price.level,
-          price: price.price,
-        },
-      }),
-    ),
-  );
-  console.log(`✅ Created ${createdVerticalPrices.length} vertical prices`);
+  // // Create vertical prices
+  // console.log('📊 Creating vertical prices...');
+  // const createdVerticalPrices = await Promise.all(
+  //   verticalPrices.map((price) =>
+  //     prisma.verticalPrice.create({
+  //       data: {
+  //         level: price.level,
+  //         price: price.price,
+  //       },
+  //     }),
+  //   ),
+  // );
+  // console.log(`✅ Created ${createdVerticalPrices.length} vertical prices`);
 
-  // Create horizontal prices
-  console.log('� Creating horizontal prices...');
-  const createdHorizontalPrices = await Promise.all(
-    horizontalPrices.map((price) =>
-      prisma.horizontalPrice.create({
-        data: {
-          name: price.name,
-          rarity: price.rarity,
-          price: price.price,
-        },
-      }),
-    ),
-  );
-  console.log(`✅ Created ${createdHorizontalPrices.length} horizontal prices`);
+  // // Create horizontal prices
+  // console.log('� Creating horizontal prices...');
+  // const createdHorizontalPrices = await Promise.all(
+  //   horizontalPrices.map((price) =>
+  //     prisma.horizontalPrice.create({
+  //       data: {
+  //         name: price.name,
+  //         rarity: price.rarity,
+  //         price: price.price,
+  //       },
+  //     }),
+  //   ),
+  // );
+  // console.log(`✅ Created ${createdHorizontalPrices.length} horizontal prices`);
 
-  console.log('✨ Seeding completed successfully!');
+  // console.log('✨ Seeding completed successfully!');
 }
 
 main()

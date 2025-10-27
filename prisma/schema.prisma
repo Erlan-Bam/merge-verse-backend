@@ -44,7 +44,7 @@ model User {
   id         String   @id @default(uuid())
   telegramId String   @unique
   role       Role     @default(USER)
-  balance    Float    @default(0)
+  balance    Decimal  @default(0)
   streak     Int      @default(0)
   isBanned   Boolean  @default(false)
 
@@ -89,7 +89,7 @@ model Item {
 model VerticalPrice {
   id        String   @id @default(uuid())
   level     Level    @unique
-  price     Float
+  price     Decimal
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,7 +99,7 @@ model HorizontalPrice {
   id        String   @id @default(uuid())
   name      String
   rarity    Rarity
-  price     Float
+  price     Decimal
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
