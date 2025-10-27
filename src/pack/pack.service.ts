@@ -18,11 +18,13 @@ export class PackService {
         select: { streak: true, activeAt: true },
       });
 
-      const startOfToday = new Date().setHours(0, 0, 0, 0);
-      const startOfActiveAt = new Date(user.activeAt).setHours(0, 0, 0, 0);
+      if (user.activeAt) {
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const startOfActiveAt = new Date(user.activeAt).setHours(0, 0, 0, 0);
 
-      if (startOfActiveAt === startOfToday) {
-        throw new HttpException('Daily pack already claimed today', 400);
+        if (startOfActiveAt === startOfToday) {
+          throw new HttpException('Daily pack already claimed today', 400);
+        }
       }
 
       let pack: Gift[] = [];
