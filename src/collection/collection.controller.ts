@@ -5,7 +5,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('collection')
-@ApiTags('Pack')
+@ApiTags('Collection')
 @ApiBearerAuth('JWT')
 @UseGuards(AuthGuard('jwt'))
 export class CollectionController {
