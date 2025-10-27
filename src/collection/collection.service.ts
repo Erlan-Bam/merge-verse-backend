@@ -47,6 +47,7 @@ export class CollectionService {
       const gifts = await this.giftService.getAllGifts();
 
       const result: {
+        isComplete: boolean;
         vertical: { isComplete: boolean; level: Level; price: number }[];
         horizontal: {
           isComplete: boolean;
@@ -55,6 +56,7 @@ export class CollectionService {
           price: number;
         }[];
       } = {
+        isComplete: true,
         vertical: [],
         horizontal: [],
       };
@@ -65,11 +67,13 @@ export class CollectionService {
             .filter((i) => i.level === data.level)
             .map((g) => g.gift.id),
         );
+        const isComplete = giftsOfLevel.size === gifts.length;
         result.vertical.push({
-          isComplete: giftsOfLevel.size === gifts.length,
+          isComplete: isComplete,
           level: data.level,
           price: data.price.toNumber(),
         });
+        if (!isComplete) result.isComplete = false;
       }
 
       for (const data of this.horizontal) {
@@ -83,22 +87,17 @@ export class CollectionService {
             )
             .map((i) => i.level),
         );
+        const isComplete = levelsForGift.size === this.vertical.length;
         result.horizontal.push({
-          isComplete: levelsForGift.size === this.vertical.length,
+          isComplete: isComplete,
           name: data.name,
           rarity: data.rarity,
           price: data.price.toNumber(),
         });
+        if (!isComplete) result.isComplete = false;
       }
 
-      return {
-        result: {
-          ...result,
-          isFull:
-            result.vertical.every((v) => v.isComplete) &&
-            result.horizontal.every((h) => h.isComplete),
-        },
-      };
+      return result;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to check collection: ', error);
