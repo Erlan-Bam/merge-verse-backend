@@ -2,6 +2,7 @@ import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { Gift, Level, Rarity } from '@prisma/client';
 import { GiftService } from 'src/gift/gift.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import { Pack } from './const/pack.const';
 
 @Injectable()
 export class PackService {
@@ -27,44 +28,26 @@ export class PackService {
         }
       }
 
-      let pack: Gift[] = [];
+      const isStreak = user.streak + 1 >= 7;
+      const config = isStreak ? Pack.FREE_STREAK : Pack.FREE_DAILY;
 
-      if (user.streak + 1 >= 7) {
-        const common = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.COMMON,
-          amount: 9,
-        });
-        const rare = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.RARE,
-          amount: 4,
-        });
-        const epic = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.EPIC,
-          amount: 2,
-        });
-        pack = [...common, ...rare, ...epic];
-      } else {
-        const common = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.COMMON,
-          amount: 7,
-        });
-        const rare = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.RARE,
-          amount: 2,
-        });
-        const epic = await this.giftService.getRandomGiftsByRarity({
-          rarity: Rarity.EPIC,
-          amount: 1,
-        });
-        pack = [...common, ...rare, ...epic];
-      }
+      const promises = Object.entries(config.composition).map(
+        ([rarity, amount]) =>
+          this.giftService.getRandomGiftsByRarity({
+            rarity: rarity as Rarity,
+            amount,
+          }),
+      );
+
+      const result = await Promise.all(promises);
+      const pack: Gift[] = result.flat();
 
       await this.prisma.$transaction(async (tx) => {
         await tx.user.update({
           where: { id: userId },
           data: {
             activeAt: new Date(),
-            streak: user.streak + 1 >= 7 ? 0 : user.streak + 1,
+            streak: isStreak ? 0 : user.streak + 1,
           },
         });
         await tx.item.createMany({
@@ -72,13 +55,13 @@ export class PackService {
             userId,
             giftId: gift.id,
             quantity: 1,
-            level: Level.L0,
-            isTradeable: false,
+            level: config.level,
+            isTradeable: config.tradeable,
           })),
         });
       });
 
-      return { pack: pack };
+      return { pack };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -89,4 +72,6 @@ export class PackService {
       throw new HttpException('Internal server error', 500);
     }
   }
+
+  async getPack() {}
 }

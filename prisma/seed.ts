@@ -187,43 +187,45 @@ const priceData = [
 ];
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  // console.log('🌱 Seeding database...');
 
-  // Clear existing data
-  console.log('🗑️  Clearing existing data...');
-  await prisma.price.deleteMany();
-  await prisma.item.deleteMany();
-  await prisma.gift.deleteMany();
-  await prisma.user.deleteMany();
+  // // Clear existing data
+  // console.log('🗑️  Clearing existing data...');
+  // await prisma.price.deleteMany();
+  // await prisma.item.deleteMany();
+  // await prisma.gift.deleteMany();
+  // await prisma.user.deleteMany();
 
-  // Create gifts
-  console.log('🎁 Creating gifts...');
-  const createdGifts = await Promise.all(
-    gifts.map((gift) =>
-      prisma.gift.create({
-        data: gift,
-      }),
-    ),
-  );
-  console.log(`✅ Created ${createdGifts.length} gifts`);
+  // // Create gifts
+  // console.log('🎁 Creating gifts...');
+  // const createdGifts = await Promise.all(
+  //   gifts.map((gift) =>
+  //     prisma.gift.create({
+  //       data: gift,
+  //     }),
+  //   ),
+  // );
+  // console.log(`✅ Created ${createdGifts.length} gifts`);
 
-  // Create prices
-  console.log('💰 Creating prices...');
+  // // Create prices
+  // console.log('💰 Creating prices...');
 
-  const createdPrices = await Promise.all(
-    priceData.map((price) =>
-      prisma.price.create({
-        data: {
-          rarity: price.rarity,
-          level: price.level,
-          value: price.value,
-        },
-      }),
-    ),
-  );
-  console.log(`✅ Created ${createdPrices.length} prices`);
+  // const createdPrices = await Promise.all(
+  //   priceData.map((price) =>
+  //     prisma.price.create({
+  //       data: {
+  //         rarity: price.rarity,
+  //         level: price.level,
+  //         value: price.value,
+  //       },
+  //     }),
+  //   ),
+  // );
+  // console.log(`✅ Created ${createdPrices.length} prices`);
 
-  console.log('✨ Seeding completed successfully!');
+  // console.log('✨ Seeding completed successfully!');
+
+  await prisma.user.updateMany({ data: { activeAt: null } });
 }
 
 main()
