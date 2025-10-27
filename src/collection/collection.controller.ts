@@ -15,4 +15,9 @@ export class CollectionController {
   async getCollection(@User('id') userId: string) {
     return this.collectionService.getCollection(userId);
   }
+
+  @Get('check')
+  async check(@User('id') userId: string) {
+    return this.collectionService.checkCollection(userId);
+  }
 }

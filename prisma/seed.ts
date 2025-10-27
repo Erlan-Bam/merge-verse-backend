@@ -164,7 +164,7 @@ const horizontalPrices = [
 async function main() {
   console.log('🌱 Seeding database...');
 
-  await prisma.item.deleteMany();
+  await prisma.user.updateMany({ data: { activeAt: null } });
 
   // Clear existing price data
   // console.log('🗑️  Clearing existing price data...');

@@ -44,6 +44,18 @@ export class GiftService {
     return this.getRandomItems(giftsByRarity, query.amount);
   }
 
+  async getAllGifts() {
+    try {
+      if (!this.gifts || this.gifts.length === 0) {
+        await this.setGifts();
+      }
+      return this.gifts;
+    } catch (error) {
+      this.logger.error('Failed to get all gifts: ', error);
+      throw error;
+    }
+  }
+
   async getUserGifts(userId: string) {
     try {
       const collection = await this.prisma.item.findMany({
