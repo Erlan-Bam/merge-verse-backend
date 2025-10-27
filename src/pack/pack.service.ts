@@ -43,15 +43,29 @@ export class PackService {
             streak: isStreak ? 0 : user.streak + 1,
           },
         });
-        await tx.item.createMany({
-          data: pack.map((gift) => ({
-            userId,
-            giftId: gift.id,
-            quantity: 1,
-            level: config.level,
-            isTradeable: config.tradeable,
-          })),
-        });
+
+        await Promise.all(
+          pack.map((gift) =>
+            tx.item.upsert({
+              where: {
+                userId_giftId: {
+                  userId,
+                  giftId: gift.id,
+                },
+              },
+              create: {
+                userId,
+                giftId: gift.id,
+                quantity: 1,
+                level: config.level,
+                isTradeable: config.tradeable,
+              },
+              update: {
+                quantity: { increment: 1 },
+              },
+            }),
+          ),
+        );
       });
 
       return { pack };
@@ -100,15 +114,28 @@ export class PackService {
           },
         });
 
-        await tx.item.createMany({
-          data: pack.map((gift) => ({
-            userId,
-            giftId: gift.id,
-            quantity: 1,
-            level: config.level,
-            isTradeable: config.tradeable,
-          })),
-        });
+        await Promise.all(
+          pack.map((gift) =>
+            tx.item.upsert({
+              where: {
+                userId_giftId: {
+                  userId,
+                  giftId: gift.id,
+                },
+              },
+              create: {
+                userId,
+                giftId: gift.id,
+                quantity: 1,
+                level: config.level,
+                isTradeable: config.tradeable,
+              },
+              update: {
+                quantity: { increment: 1 },
+              },
+            }),
+          ),
+        );
       });
 
       return {
