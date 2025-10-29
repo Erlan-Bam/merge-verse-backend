@@ -2,6 +2,7 @@ import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { HorizontalPrice, Level, Rarity, VerticalPrice } from '@prisma/client';
 import { GiftService } from 'src/gift/gift.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import { CraftCardDto } from './dto/craft-card.dto';
 
 @Injectable()
 export class CollectionService {
@@ -103,5 +104,154 @@ export class CollectionService {
       this.logger.error('Failed to check collection: ', error);
       throw error;
     }
+  }
+
+  async craftCard(userId: string, data: CraftCardDto) {
+    try {
+      const [item1, item2] = await Promise.all([
+        this.prisma.item.findUnique({
+          where: { id: data.item1Id, userId: userId },
+          select: {
+            id: true,
+            level: true,
+            quantity: true,
+            isTradeable: true,
+            giftId: true,
+          },
+        }),
+        this.prisma.item.findUnique({
+          where: { id: data.item2Id, userId: userId },
+          select: {
+            id: true,
+            level: true,
+            quantity: true,
+            isTradeable: true,
+            giftId: true,
+          },
+        }),
+      ]);
+
+      if (!item1 || !item2) {
+        throw new HttpException('One or both items not found', 404);
+      }
+
+      if (item1.giftId !== item2.giftId || item1.level !== item2.level) {
+        throw new HttpException(
+          'Items are not of the same type and level',
+          400,
+        );
+      }
+
+      if (item1.id === item2.id) {
+        if (item1.quantity < 2) {
+          throw new HttpException(
+            'Insufficient quantity for crafting from the same item',
+            400,
+          );
+        }
+      } else {
+        if (item1.quantity < 1 || item2.quantity < 1) {
+          throw new HttpException('Insufficient quantity', 400);
+        }
+      }
+
+      const level = item1.level;
+
+      const nextLevel = this.getNextLevel(level);
+      const isTradeable = item1.isTradeable && item2.isTradeable;
+      if (!nextLevel) {
+        throw new HttpException('Cannot craft beyond maximum level', 400);
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        if (item1.id === item2.id) {
+          if (item1.quantity === 2) {
+            await tx.item.delete({ where: { id: item1.id } });
+          } else {
+            await tx.item.update({
+              where: { id: item1.id },
+              data: { quantity: { decrement: 2 } },
+            });
+          }
+        } else {
+          if (item1.quantity === 1) {
+            await tx.item.delete({ where: { id: item1.id } });
+          } else {
+            await tx.item.update({
+              where: { id: item1.id },
+              data: { quantity: { decrement: 1 } },
+            });
+          }
+
+          if (item2.quantity === 1) {
+            await tx.item.delete({ where: { id: item2.id } });
+          } else {
+            await tx.item.update({
+              where: { id: item2.id },
+              data: { quantity: { decrement: 1 } },
+            });
+          }
+        }
+
+        const newItem = await tx.item.findUnique({
+          where: {
+            userId_giftId_isTradeable: {
+              userId: userId,
+              giftId: item1.giftId,
+              isTradeable: isTradeable,
+            },
+          },
+        });
+
+        if (newItem) {
+          await tx.item.update({
+            where: { id: newItem.id },
+            data: { quantity: { increment: 1 } },
+          });
+        } else {
+          await tx.item.create({
+            data: {
+              userId: userId,
+              giftId: item1.giftId,
+              level: nextLevel,
+              quantity: 1,
+              isTradeable: isTradeable,
+            },
+          });
+        }
+      });
+
+      return {
+        success: true,
+        message: 'Card crafted successfully',
+        resultLevel: nextLevel,
+        isTradeable: isTradeable,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to craft card: ', error);
+      throw error;
+    }
+  }
+
+  private getNextLevel(level: Level): Level | null {
+    if (level === Level.L10) {
+      return null;
+    }
+    const levels = [
+      Level.L0,
+      Level.L1,
+      Level.L2,
+      Level.L3,
+      Level.L4,
+      Level.L5,
+      Level.L6,
+      Level.L7,
+      Level.L8,
+      Level.L9,
+      Level.L10,
+    ];
+    const index = levels.indexOf(level);
+    return levels[index + 1];
   }
 }

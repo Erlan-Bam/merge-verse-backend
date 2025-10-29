@@ -1,8 +1,9 @@
-import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
 import { CollectionService } from './collection.service';
 import { User } from 'src/shared/decorator/user.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { CraftCardDto } from './dto/craft-card.dto';
 
 @Controller('collection')
 @ApiTags('Collection')
@@ -17,7 +18,12 @@ export class CollectionController {
   }
 
   @Get('check')
-  async check(@User('id') userId: string) {
+  async checkCollection(@User('id') userId: string) {
     return this.collectionService.checkCollection(userId);
+  }
+
+  @Post('craft')
+  async craftCard(@User('id') userId: string, @Body() data: CraftCardDto) {
+    return this.collectionService.craftCard(userId, data);
   }
 }

@@ -61,6 +61,7 @@ export class GiftService {
       const collection = await this.prisma.item.findMany({
         where: { userId: userId },
         select: {
+          id: true,
           quantity: true,
           level: true,
           isTradeable: true,
