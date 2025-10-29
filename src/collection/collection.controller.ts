@@ -10,6 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CraftCardDto } from './dto/craft-card.dto';
+import { VerticalPrizeDto } from './dto/vertical-prize.dto';
+import { HorizontalPrizeDto } from './dto/horizontal-prize.dto';
 
 @Controller('collection')
 @ApiTags('Collection')
@@ -234,5 +236,121 @@ export class CollectionController {
   })
   async craftCard(@User('id') userId: string, @Body() data: CraftCardDto) {
     return this.collectionService.craftCard(userId, data);
+  }
+
+  @Post('vertical-prize')
+  @ApiOperation({
+    summary: 'Claim vertical collection prize',
+    description:
+      'Claim a reward for completing a vertical collection (collecting all gifts at a specific level). The user must have all gifts at the specified level to claim the prize. The reward amount is added to the user\'s balance and all items at this level will be deleted.',
+  })
+  @ApiBody({ type: VerticalPrizeDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Prize claimed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the prize was claimed successfully',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Success message',
+          example: 'Vertical prize claimed for level L5',
+        },
+        prizeAmount: {
+          type: 'number',
+          description: 'The amount of the prize awarded',
+          example: 1000,
+        },
+        newBalance: {
+          type: 'number',
+          description: 'The user\'s new balance after claiming the prize',
+          example: 5000,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request - Collection is not complete or invalid level',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async verticalPrize(
+    @User('id') userId: string,
+    @Body() data: VerticalPrizeDto,
+  ) {
+    return this.collectionService.getVerticalPrize(userId, data.level);
+  }
+
+  @Post('horizontal-prize')
+  @ApiOperation({
+    summary: 'Claim horizontal collection prize',
+    description:
+      'Claim a reward for completing a horizontal collection (collecting all levels of a specific gift, excluding L0). The user must have all levels (L1-L10 based on available vertical prices) of the specified gift to claim the prize. The reward amount is added to the user\'s balance and all levels of this gift (excluding L0) will be deleted.',
+  })
+  @ApiBody({ type: HorizontalPrizeDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Prize claimed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the prize was claimed successfully',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Success message',
+          example: 'Horizontal prize claimed for Dragon (LEGENDARY)',
+        },
+        prizeAmount: {
+          type: 'number',
+          description: 'The amount of the prize awarded',
+          example: 5000,
+        },
+        newBalance: {
+          type: 'number',
+          description: 'The user\'s new balance after claiming the prize',
+          example: 10000,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request - Collection is not complete or invalid gift name/rarity',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async horizontalPrize(
+    @User('id') userId: string,
+    @Body() data: HorizontalPrizeDto,
+  ) {
+    return this.collectionService.getHorizontalPrize(
+      userId,
+      data.name,
+      data.rarity,
+    );
   }
 }
