@@ -163,7 +163,7 @@ export class CollectionService {
         throw new HttpException('Cannot craft beyond maximum level', 400);
       }
 
-      await this.prisma.$transaction(async (tx) => {
+      const newItem = await this.prisma.$transaction(async (tx) => {
         if (item1.id === item2.id) {
           if (item1.quantity === 2) {
             await tx.item.delete({ where: { id: item1.id } });
@@ -204,12 +204,12 @@ export class CollectionService {
         });
 
         if (newItem) {
-          await tx.item.update({
+          return await tx.item.update({
             where: { id: newItem.id },
             data: { quantity: { increment: 1 } },
           });
         } else {
-          await tx.item.create({
+          return await tx.item.create({
             data: {
               userId: userId,
               giftId: item1.giftId,
@@ -224,8 +224,7 @@ export class CollectionService {
       return {
         success: true,
         message: 'Card crafted successfully',
-        resultLevel: nextLevel,
-        isTradeable: isTradeable,
+        item: newItem,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
