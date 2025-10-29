@@ -193,13 +193,13 @@ export class CollectionService {
           }
         }
 
-        const newItem = await tx.item.findUnique({
+        // Ищем существующий item с nextLevel
+        const newItem = await tx.item.findFirst({
           where: {
-            userId_giftId_isTradeable: {
-              userId: userId,
-              giftId: item1.giftId,
-              isTradeable: isTradeable,
-            },
+            userId: userId,
+            giftId: item1.giftId,
+            level: nextLevel,
+            isTradeable: isTradeable,
           },
         });
 
