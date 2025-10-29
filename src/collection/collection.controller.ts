@@ -145,8 +145,7 @@ export class CollectionController {
         },
         horizontal: {
           type: 'array',
-          description:
-            'Horizontal collection status (all levels of each gift)',
+          description: 'Horizontal collection status (all levels of each gift)',
           items: {
             type: 'object',
             properties: {
@@ -206,18 +205,7 @@ export class CollectionController {
         },
         resultLevel: {
           type: 'string',
-          enum: [
-            'L1',
-            'L2',
-            'L3',
-            'L4',
-            'L5',
-            'L6',
-            'L7',
-            'L8',
-            'L9',
-            'L10',
-          ],
+          enum: ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'],
           description: 'The level of the resulting crafted card',
         },
         isTradeable: {
