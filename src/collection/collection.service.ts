@@ -193,7 +193,6 @@ export class CollectionService {
           }
         }
 
-        // Ищем существующий item с nextLevel
         const newItem = await tx.item.findFirst({
           where: {
             userId: userId,
