@@ -42,6 +42,29 @@ export class UserService {
     }
   }
 
+  async getProfile(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          role: true,
+          isBanned: true,
+          balance: true,
+        },
+      });
+
+      return user;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Failed to get user profile: ', error);
+      throw new HttpException('Failed to get user profile', 500);
+    }
+  }
+
   async telegram(data: TelegramAuthDto): Promise<{ accessToken: string }> {
     try {
       const botToken =

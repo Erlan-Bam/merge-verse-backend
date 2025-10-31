@@ -47,10 +47,16 @@ export class UserController {
     }
   }
 
+  @Get('profile')
+  async getProfile(@User('id') userId: string) {
+    return this.userService.getProfile(userId);
+  }
+
   @Post('test')
   @ApiOperation({
     summary: 'Test endpoint - Generate token',
-    description: 'Development/testing endpoint to generate a JWT token for a hardcoded user ID. Should not be used in production.',
+    description:
+      'Development/testing endpoint to generate a JWT token for a hardcoded user ID. Should not be used in production.',
   })
   @ApiResponse({
     status: 201,
