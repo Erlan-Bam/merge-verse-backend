@@ -1,5 +1,11 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { HorizontalPrice, Level, Rarity, VerticalPrice } from '@prisma/client';
+import {
+  HorizontalPrice,
+  Item,
+  Level,
+  Rarity,
+  VerticalPrice,
+} from '@prisma/client';
 import { GiftService } from 'src/gift/gift.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { CraftCardDto } from './dto/craft-card.dto';
@@ -238,6 +244,7 @@ export class CollectionService {
     if (this.vertical.length === 0) {
       await this.setPrices();
     }
+
     try {
       const collection = await this.giftService.getUserGifts(userId);
       const gifts = await this.giftService.getAllGifts();
@@ -252,7 +259,6 @@ export class CollectionService {
       );
 
       const isComplete = giftsOfLevel.size === gifts.length;
-
       if (!isComplete) {
         throw new HttpException(
           `Vertical collection for level ${level} is not complete. You have ${giftsOfLevel.size} out of ${gifts.length} gifts.`,
@@ -260,30 +266,46 @@ export class CollectionService {
         );
       }
 
-      // Award the prize and delete the items in a transaction
       const result = await this.prisma.$transaction(async (tx) => {
-        // Award the prize
+        // ✅ Increment balance
         const user = await tx.user.update({
           where: { id: userId },
           data: {
             balance: { increment: vertical.price },
           },
-          select: {
-            id: true,
-            balance: true,
-          },
+          select: { id: true, balance: true },
         });
 
-        // Delete all items at this level for the user
-        await tx.item.deleteMany({
-          where: {
-            userId: userId,
-            level: level,
-          },
+        const items = await tx.item.findMany({
+          where: { userId, level },
         });
+
+        const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
+          if (!acc[item.giftId]) acc[item.giftId] = [];
+          acc[item.giftId].push(item);
+          return acc;
+        }, {});
+
+        for (const giftId of Object.keys(grouped)) {
+          const variants = grouped[giftId];
+          const target = variants.find((v) => !v.isTradeable) ?? variants[0];
+
+          this.logger.debug(
+            `Removing item ${target.id} (Gift ID: ${giftId}, Level: ${level}, Tradeable: ${target.isTradeable})`,
+          );
+
+          if (target.quantity > 1) {
+            await tx.item.update({
+              where: { id: target.id },
+              data: { quantity: { decrement: 1 } },
+            });
+          } else {
+            await tx.item.delete({ where: { id: target.id } });
+          }
+        }
 
         return {
-          prizeAmount: vertical.price.toNumber(),
+          prize: vertical.price.toNumber(),
           newBalance: user.balance.toNumber(),
         };
       });
@@ -291,7 +313,7 @@ export class CollectionService {
       return {
         success: true,
         message: `Vertical prize claimed for level ${level}`,
-        prizeAmount: result.prizeAmount,
+        prize: result.prize,
         newBalance: result.newBalance,
       };
     } catch (error) {
@@ -305,10 +327,17 @@ export class CollectionService {
     if (this.vertical.length === 0 || this.horizontal.length === 0) {
       await this.setPrices();
     }
+
     try {
       const collection = await this.giftService.getUserGifts(userId);
+      const gifts = await this.giftService.getAllGifts();
 
-      // Find the price data for this gift
+      const gift = gifts.find((g) => g.name === name && g.rarity === rarity);
+
+      if (!gift) {
+        throw new HttpException('Gift not found', 404);
+      }
+
       const horizontal = this.horizontal.find(
         (h) => h.name === name && h.rarity === rarity,
       );
@@ -316,7 +345,6 @@ export class CollectionService {
         throw new HttpException('Invalid gift name or rarity', 400);
       }
 
-      // Check if user has all levels of this gift (excluding L0)
       const levelsForGift = new Set(
         collection
           .filter(
@@ -329,7 +357,6 @@ export class CollectionService {
       );
 
       const isComplete = levelsForGift.size === this.vertical.length;
-
       if (!isComplete) {
         throw new HttpException(
           `Horizontal collection for ${name} (${rarity}) is not complete. You have ${levelsForGift.size} out of ${this.vertical.length} levels.`,
@@ -337,48 +364,52 @@ export class CollectionService {
         );
       }
 
-      // Get the gift ID for deletion
-      const gift = await this.prisma.gift.findFirst({
-        where: {
-          name: name,
-          rarity: rarity,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      if (!gift) {
-        throw new HttpException('Gift not found', 404);
-      }
-
-      // Award the prize and delete the items in a transaction
       const result = await this.prisma.$transaction(async (tx) => {
-        // Award the prize
         const user = await tx.user.update({
           where: { id: userId },
           data: {
             balance: { increment: horizontal.price },
           },
-          select: {
-            id: true,
-            balance: true,
+          select: { id: true, balance: true },
+        });
+
+        const items = await tx.item.findMany({
+          where: {
+            userId,
+            giftId: gift.id,
+            level: { not: Level.L0 },
           },
         });
 
-        // Delete all levels of this gift for the user (excluding L0)
-        await tx.item.deleteMany({
-          where: {
-            userId: userId,
-            giftId: gift.id,
-            level: {
-              not: Level.L0,
-            },
+        const grouped = items.reduce<Record<Level, typeof items>>(
+          (acc, item) => {
+            if (!acc[item.level]) acc[item.level] = [];
+            acc[item.level].push(item);
+            return acc;
           },
-        });
+          {} as Record<Level, typeof items>,
+        );
+
+        for (const level of Object.keys(grouped)) {
+          const variants = grouped[level as Level];
+          const target = variants.find((v) => !v.isTradeable) ?? variants[0];
+
+          this.logger.debug(
+            `Removing item ${target.id} (Gift ID: ${target.giftId}, Level: ${level}, Tradeable: ${target.isTradeable})`,
+          );
+
+          if (target.quantity > 1) {
+            await tx.item.update({
+              where: { id: target.id },
+              data: { quantity: { decrement: 1 } },
+            });
+          } else {
+            await tx.item.delete({ where: { id: target.id } });
+          }
+        }
 
         return {
-          prizeAmount: horizontal.price.toNumber(),
+          prize: horizontal.price.toNumber(),
           newBalance: user.balance.toNumber(),
         };
       });
@@ -386,7 +417,7 @@ export class CollectionService {
       return {
         success: true,
         message: `Horizontal prize claimed for ${name} (${rarity})`,
-        prizeAmount: result.prizeAmount,
+        prize: result.prize,
         newBalance: result.newBalance,
       };
     } catch (error) {

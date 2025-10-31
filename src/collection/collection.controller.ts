@@ -242,7 +242,7 @@ export class CollectionController {
   @ApiOperation({
     summary: 'Claim vertical collection prize',
     description:
-      'Claim a reward for completing a vertical collection (collecting all gifts at a specific level). The user must have all gifts at the specified level to claim the prize. The reward amount is added to the user\'s balance and all items at this level will be deleted.',
+      "Claim a reward for completing a vertical collection (collecting all gifts at a specific level). The user must have all gifts at the specified level to claim the prize. The reward amount is added to the user's balance and all items at this level will be deleted.",
   })
   @ApiBody({ type: VerticalPrizeDto })
   @ApiResponse({
@@ -268,7 +268,7 @@ export class CollectionController {
         },
         newBalance: {
           type: 'number',
-          description: 'The user\'s new balance after claiming the prize',
+          description: "The user's new balance after claiming the prize",
           example: 5000,
         },
       },
@@ -276,8 +276,7 @@ export class CollectionController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      'Bad Request - Collection is not complete or invalid level',
+    description: 'Bad Request - Collection is not complete or invalid level',
   })
   @ApiResponse({
     status: 401,
@@ -298,7 +297,7 @@ export class CollectionController {
   @ApiOperation({
     summary: 'Claim horizontal collection prize',
     description:
-      'Claim a reward for completing a horizontal collection (collecting all levels of a specific gift, excluding L0). The user must have all levels (L1-L10 based on available vertical prices) of the specified gift to claim the prize. The reward amount is added to the user\'s balance and all levels of this gift (excluding L0) will be deleted.',
+      "Claim a reward for completing a horizontal collection (collecting all levels of a specific gift, excluding L0). The user must have all levels (L1-L10 based on available vertical prices) of the specified gift to claim the prize. The reward amount is added to the user's balance and all levels of this gift (excluding L0) will be deleted.",
   })
   @ApiBody({ type: HorizontalPrizeDto })
   @ApiResponse({
@@ -324,7 +323,7 @@ export class CollectionController {
         },
         newBalance: {
           type: 'number',
-          description: 'The user\'s new balance after claiming the prize',
+          description: "The user's new balance after claiming the prize",
           example: 10000,
         },
       },
