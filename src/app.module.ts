@@ -6,6 +6,7 @@ import { GiftModule } from './gift/gift.module';
 import { UserModule } from './user/user.module';
 import { PackModule } from './pack/pack.module';
 import { CollectionModule } from './collection/collection.module';
+import { AuctionModule } from './auction/auction.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -32,6 +33,7 @@ import * as Joi from 'joi';
     UserModule,
     PackModule,
     CollectionModule,
+    AuctionModule,
   ],
 })
 export class AppModule {}

@@ -1,5 +1,5 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
-import { Gift, Rarity } from '@prisma/client';
+import { Gift, Level, Price, Rarity } from '@prisma/client';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { GetRandomGifts } from './dto/get-random-gifts.dto';
 
@@ -7,8 +7,12 @@ import { GetRandomGifts } from './dto/get-random-gifts.dto';
 export class GiftService {
   private readonly logger = new Logger(GiftService.name);
   private gifts: Gift[] = [];
+  private prices: Price[] = [];
   constructor(private prisma: PrismaService) {
     this.setGifts().catch((error) => {
+      this.logger.error(error);
+    });
+    this.setPrices().catch((error) => {
       this.logger.error(error);
     });
   }
@@ -18,6 +22,14 @@ export class GiftService {
       this.gifts = await this.prisma.gift.findMany();
     } catch (error) {
       this.logger.error('Failed to get all gifts: ', error);
+    }
+  }
+
+  private async setPrices(): Promise<void> {
+    try {
+      this.prices = await this.prisma.price.findMany();
+    } catch (error) {
+      this.logger.error('Failed to get all prices: ', error);
     }
   }
 
@@ -42,6 +54,13 @@ export class GiftService {
     const giftsByRarity = await this.getByRarity(query.rarity);
 
     return this.getRandomItems(giftsByRarity, query.amount);
+  }
+
+  async getGiftPrice(rarity: Rarity, level: Level) {
+    const instance = this.prices.find(
+      (p) => p.rarity === rarity && p.level === level,
+    );
+    return instance.price;
   }
 
   async getAllGifts() {

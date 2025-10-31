@@ -161,15 +161,104 @@ const horizontalPrices = [
   { name: 'Plush Pepe', rarity: Rarity.MYTHIC, price: 160.1 },
 ];
 
+// Card prices by level and rarity (L1-L10)
+const prices = [
+  // L1 prices
+  { level: Level.L1, rarity: Rarity.COMMON, price: 0.034 },
+  { level: Level.L1, rarity: Rarity.RARE, price: 0.066 },
+  { level: Level.L1, rarity: Rarity.EPIC, price: 0.194 },
+  { level: Level.L1, rarity: Rarity.LEGENDARY, price: 0.709 },
+  { level: Level.L1, rarity: Rarity.MYTHIC, price: 3.127 },
+
+  // L2 prices
+  { level: Level.L2, rarity: Rarity.COMMON, price: 0.068 },
+  { level: Level.L2, rarity: Rarity.RARE, price: 0.132 },
+  { level: Level.L2, rarity: Rarity.EPIC, price: 0.388 },
+  { level: Level.L2, rarity: Rarity.LEGENDARY, price: 1.418 },
+  { level: Level.L2, rarity: Rarity.MYTHIC, price: 6.254 },
+
+  // L3 prices
+  { level: Level.L3, rarity: Rarity.COMMON, price: 0.136 },
+  { level: Level.L3, rarity: Rarity.RARE, price: 0.264 },
+  { level: Level.L3, rarity: Rarity.EPIC, price: 0.776 },
+  { level: Level.L3, rarity: Rarity.LEGENDARY, price: 2.836 },
+  { level: Level.L3, rarity: Rarity.MYTHIC, price: 12.508 },
+
+  // L4 prices
+  { level: Level.L4, rarity: Rarity.COMMON, price: 0.272 },
+  { level: Level.L4, rarity: Rarity.RARE, price: 0.528 },
+  { level: Level.L4, rarity: Rarity.EPIC, price: 1.552 },
+  { level: Level.L4, rarity: Rarity.LEGENDARY, price: 5.672 },
+  { level: Level.L4, rarity: Rarity.MYTHIC, price: 25.016 },
+
+  // L5 prices
+  { level: Level.L5, rarity: Rarity.COMMON, price: 0.544 },
+  { level: Level.L5, rarity: Rarity.RARE, price: 1.056 },
+  { level: Level.L5, rarity: Rarity.EPIC, price: 3.104 },
+  { level: Level.L5, rarity: Rarity.LEGENDARY, price: 11.344 },
+  { level: Level.L5, rarity: Rarity.MYTHIC, price: 50.032 },
+
+  // L6 prices
+  { level: Level.L6, rarity: Rarity.COMMON, price: 1.088 },
+  { level: Level.L6, rarity: Rarity.RARE, price: 2.112 },
+  { level: Level.L6, rarity: Rarity.EPIC, price: 6.208 },
+  { level: Level.L6, rarity: Rarity.LEGENDARY, price: 22.688 },
+  { level: Level.L6, rarity: Rarity.MYTHIC, price: 100.064 },
+
+  // L7 prices
+  { level: Level.L7, rarity: Rarity.COMMON, price: 2.176 },
+  { level: Level.L7, rarity: Rarity.RARE, price: 4.224 },
+  { level: Level.L7, rarity: Rarity.EPIC, price: 12.416 },
+  { level: Level.L7, rarity: Rarity.LEGENDARY, price: 45.376 },
+  { level: Level.L7, rarity: Rarity.MYTHIC, price: 200.128 },
+
+  // L8 prices
+  { level: Level.L8, rarity: Rarity.COMMON, price: 4.352 },
+  { level: Level.L8, rarity: Rarity.RARE, price: 8.448 },
+  { level: Level.L8, rarity: Rarity.EPIC, price: 24.832 },
+  { level: Level.L8, rarity: Rarity.LEGENDARY, price: 90.752 },
+  { level: Level.L8, rarity: Rarity.MYTHIC, price: 400.256 },
+
+  // L9 prices
+  { level: Level.L9, rarity: Rarity.COMMON, price: 8.704 },
+  { level: Level.L9, rarity: Rarity.RARE, price: 16.896 },
+  { level: Level.L9, rarity: Rarity.EPIC, price: 49.664 },
+  { level: Level.L9, rarity: Rarity.LEGENDARY, price: 181.504 },
+  { level: Level.L9, rarity: Rarity.MYTHIC, price: 800.512 },
+
+  // L10 prices
+  { level: Level.L10, rarity: Rarity.COMMON, price: 17.408 },
+  { level: Level.L10, rarity: Rarity.RARE, price: 33.792 },
+  { level: Level.L10, rarity: Rarity.EPIC, price: 99.328 },
+  { level: Level.L10, rarity: Rarity.LEGENDARY, price: 363.008 },
+  { level: Level.L10, rarity: Rarity.MYTHIC, price: 1601.024 },
+];
+
 async function main() {
   console.log('🌱 Seeding database...');
 
   await prisma.user.updateMany({ data: { activeAt: null } });
 
   // Clear existing price data
-  // console.log('🗑️  Clearing existing price data...');
+  console.log('🗑️  Clearing existing price data...');
+  await prisma.price.deleteMany();
   // await prisma.horizontalPrice.deleteMany();
   // await prisma.verticalPrice.deleteMany();
+
+  // Create prices (card prices by level and rarity)
+  console.log('💰 Creating card prices...');
+  const createdPrices = await Promise.all(
+    prices.map((price) =>
+      prisma.price.create({
+        data: {
+          level: price.level,
+          rarity: price.rarity,
+          price: price.price,
+        },
+      }),
+    ),
+  );
+  console.log(`✅ Created ${createdPrices.length} card prices`);
 
   // // Create vertical prices
   // console.log('📊 Creating vertical prices...');
@@ -186,7 +275,7 @@ async function main() {
   // console.log(`✅ Created ${createdVerticalPrices.length} vertical prices`);
 
   // // Create horizontal prices
-  // console.log('� Creating horizontal prices...');
+  // console.log('📊 Creating horizontal prices...');
   // const createdHorizontalPrices = await Promise.all(
   //   horizontalPrices.map((price) =>
   //     prisma.horizontalPrice.create({
@@ -200,7 +289,7 @@ async function main() {
   // );
   // console.log(`✅ Created ${createdHorizontalPrices.length} horizontal prices`);
 
-  // console.log('✨ Seeding completed successfully!');
+  console.log('✨ Seeding completed successfully!');
 }
 
 main()
