@@ -362,15 +362,19 @@ export class GiveawayService {
 
   async finishGiveaway(giveawayId: string) {
     try {
-      const giveaway = await this.prisma.$transaction(async (tx) => {
+      const { winners } = await this.prisma.$transaction(async (tx) => {
         const giveaway = await tx.giveaway.findUnique({
           where: { id: giveawayId },
           select: {
             status: true,
-            giftId: true,
+            gift: {
+              select: { id: true, name: true, rarity: true },
+            },
             entries: {
               select: {
-                userId: true,
+                user: {
+                  select: { id: true, telegramId: true },
+                },
                 giftId: true,
                 isTradeable: true,
               },
@@ -387,7 +391,7 @@ export class GiveawayService {
             await tx.item.upsert({
               where: {
                 userId_giftId_level_isTradeable: {
-                  userId: entry.userId,
+                  userId: entry.user.id,
                   giftId: entry.giftId,
                   level: Level.L10,
                   isTradeable: entry.isTradeable,
@@ -395,7 +399,7 @@ export class GiveawayService {
               },
               update: { quantity: { increment: 1 } },
               create: {
-                userId: entry.userId,
+                userId: entry.user.id,
                 giftId: entry.giftId,
                 level: Level.L10,
                 isTradeable: entry.isTradeable,
@@ -403,44 +407,79 @@ export class GiveawayService {
               },
             });
           }
-          return await tx.giveaway.update({
+          await tx.giveaway.update({
             where: { id: giveawayId },
             data: {
               status: GiveawayStatus.CANCELLED,
             },
           });
+          return { winners: [] };
         } else {
           const numberOfWinners = Math.min(
             10,
             Math.ceil(giveaway.entries.length / 30),
           );
-          const winners = await this.getRandomItems(
+          const selectedWinners = this.getRandomItems(
             giveaway.entries,
             numberOfWinners,
           );
 
-          await tx.winner.createMany({
-            data: winners.map((winner) => {
-              return {
-                giveawayId: giveawayId,
-                userId: winner.userId,
-                choice: WinnerChoice.PENDING,
-              };
-            }),
-          });
+          const winners = await Promise.all(
+            selectedWinners.map((winner) =>
+              tx.winner.create({
+                data: {
+                  giveawayId,
+                  userId: winner.user.id,
+                  choice: WinnerChoice.PENDING,
+                  isFinished: false,
+                },
+                select: {
+                  id: true,
+                  user: {
+                    select: {
+                      id: true,
+                      telegramId: true,
+                    },
+                  },
+                  giveaway: {
+                    select: {
+                      gift: {
+                        select: {
+                          name: true,
+                          rarity: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            ),
+          );
 
-          return await tx.giveaway.update({
+          await tx.giveaway.update({
             where: { id: giveawayId },
             data: {
-              status: GiveawayStatus.FINISHED,
+              status: GiveawayStatus.CANCELLED,
             },
           });
+
+          return { winners: winners };
         }
       });
 
-      this.logger.log(`Finished giveaway ${giveawayId}`);
+      for (const winner of winners) {
+        this.logger.log(
+          `Notifying winner ${winner.user.telegramId} for giveaway ${giveawayId}`,
+        );
+        await this.botService.sendWinnerNotification(
+          winner.user.telegramId,
+          winner.user.id,
+          winner.giveaway.gift.name,
+          winner.giveaway.gift.rarity,
+        );
+      }
 
-      return giveaway;
+      this.logger.log(`Finished giveaway ${giveawayId}`);
     } catch (error) {
       this.logger.error('Failed to finish giveaway:', error);
       throw error;
