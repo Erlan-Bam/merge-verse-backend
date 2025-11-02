@@ -40,6 +40,12 @@ enum Level {
   L10
 }
 
+enum AuctionStatus {
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
 model User {
   id         String   @id @default(uuid())
   telegramId String   @unique
@@ -52,9 +58,11 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  inventory  Item[]
-  auctions   Auction[]
-  bids       Bid[]
+  inventory        Item[]
+  auctions         Auction[]
+  bids             Bid[]
+  giveaways        Giveaway[] @relation("GiveawayWinner")
+  entries          Entry[] @relation("GiveawayEntries")
 }
 
 model Gift {
@@ -66,8 +74,9 @@ model Gift {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  inventory Item[]
-  auctions  Auction[]
+  inventory  Item[]
+  auctions   Auction[]
+  giveaways  Giveaway[]
 }
 
 model Item {
@@ -100,6 +109,7 @@ model VerticalPrice {
 
 model Auction {
   id         String   @id @default(uuid())
+  status     AuctionStatus @default(ACTIVE)
   userId     String
   giftId     String
   level      Level
@@ -142,6 +152,7 @@ model Bid {
   auction    Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([auctionId, userId])
   @@index([auctionId])
   @@index([userId])
 }
@@ -156,4 +167,48 @@ model HorizontalPrice {
   updatedAt DateTime @updatedAt
 
   @@unique([name, rarity])
+}
+
+enum GiveawayStatus {
+  PENDING
+  ACTIVE
+  FINISHED
+}
+
+model Giveaway {
+  id         String         @id @default(uuid())
+  giftId     String
+  status     GiveawayStatus @default(PENDING)
+  startAt    DateTime
+  endsAt     DateTime
+  winnerId   String?
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  gift       Gift           @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  winner     User?          @relation("GiveawayWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  entries    Entry[]
+
+  @@index([giftId])
+  @@index([winnerId])
+  @@index([status])
+  @@index([startAt])
+  @@index([endsAt])
+}
+
+model Entry {
+  id          String    @id @default(uuid())
+  giveawayId  String
+  userId      String
+  isTradeable Boolean 
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  user        User      @relation("GiveawayEntries", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([giveawayId])
+  @@index([userId])
 }

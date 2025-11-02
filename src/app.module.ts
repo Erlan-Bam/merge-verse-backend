@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { PackModule } from './pack/pack.module';
 import { CollectionModule } from './collection/collection.module';
 import { AuctionModule } from './auction/auction.module';
+import { GiveawayModule } from './giveaway/giveaway.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -34,6 +35,7 @@ import * as Joi from 'joi';
     PackModule,
     CollectionModule,
     AuctionModule,
+    GiveawayModule,
   ],
 })
 export class AppModule {}

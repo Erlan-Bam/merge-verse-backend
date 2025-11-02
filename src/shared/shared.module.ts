@@ -1,10 +1,12 @@
-import { Global, Module } from '@nestjs/common';
+import { forwardRef, Global, Module } from '@nestjs/common';
 import { PrismaService } from './services/prisma.service';
 import { CronService } from './services/cron.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { BotService } from './services/bot.service';
 import { ConfigService } from '@nestjs/config';
+import { GiveawayModule } from 'src/giveaway/giveaway.module';
+import { AuctionModule } from 'src/auction/auction.module';
 
 @Global()
 @Module({
@@ -16,6 +18,8 @@ import { ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    forwardRef(() => GiveawayModule),
+    forwardRef(() => AuctionModule),
   ],
   providers: [PrismaService, BotService, CronService, JwtStrategy],
   exports: [PrismaService, BotService, CronService, JwtStrategy, JwtModule],

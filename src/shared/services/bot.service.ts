@@ -85,4 +85,18 @@ Click the button below to launch the game!
     this.bot.stop();
     this.logger.log('Telegram bot stopped');
   }
+
+  /**
+   * Send a message to a specific user
+   */
+  async sendMessage(telegramId: string, text: string) {
+    try {
+      await this.bot.api.sendMessage(telegramId, text, {
+        parse_mode: 'HTML',
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send message to ${telegramId}:`, error);
+      throw error;
+    }
+  }
 }
