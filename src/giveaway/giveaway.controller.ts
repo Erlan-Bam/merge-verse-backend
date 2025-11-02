@@ -15,6 +15,7 @@ import { User } from 'src/shared/decorator/user.decorator';
 import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
 import { CreateGiveawayDto } from './dto/create-giveaway.dto';
+import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
 
 @Controller('giveaway')
 @UseGuards(UserGuard)
@@ -29,6 +30,11 @@ export class GiveawayController {
   @Get('entries')
   async getEntries(@User('id') userId: string) {
     return this.giveawayService.getUserEntries(userId);
+  }
+
+  @Get('winners')
+  async getWinners(@Query() query: GetGiveawaysWinnerDto) {
+    return this.giveawayService.getTopWinners(query);
   }
 
   @Get(':id')

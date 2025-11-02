@@ -1,10 +1,11 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
-import { GiveawayStatus, Level } from '@prisma/client';
+import { GiveawayStatus, Level, Prisma, WinnerChoice } from '@prisma/client';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
 import { BotService } from 'src/shared/services/bot.service';
 import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GiftService } from 'src/gift/gift.service';
+import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
 
 @Injectable()
 export class GiveawayService {
@@ -31,10 +32,10 @@ export class GiveawayService {
               url: true,
             },
           },
-          winner: {
+          winners: {
             select: {
               id: true,
-              telegramId: true,
+              userId: true,
             },
           },
           _count: {
@@ -64,12 +65,7 @@ export class GiveawayService {
         where: { id: giveawayId },
         include: {
           gift: true,
-          winner: {
-            select: {
-              id: true,
-              telegramId: true,
-            },
-          },
+          winners: true,
           _count: {
             select: {
               entries: true,
@@ -142,10 +138,11 @@ export class GiveawayService {
         } else {
           await tx.item.delete({ where: { id: item.id } });
         }
-        return tx.entry.create({
+        return await tx.entry.create({
           data: {
             giveawayId: data.giveawayId,
             userId,
+            giftId: data.giftId,
             isTradeable: item.isTradeable,
           },
           include: {
@@ -198,6 +195,95 @@ export class GiveawayService {
       this.logger.error('Failed to get user entries:', error);
       throw new HttpException(
         'Failed to get user entries',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTopWinners(query: GetGiveawaysWinnerDto) {
+    try {
+      const where: Prisma.GiveawayWhereInput = {
+        status: GiveawayStatus.FINISHED,
+      };
+
+      if (query.id) {
+        where.id = query.id;
+      }
+
+      if (query.rarity) {
+        where.gift = {
+          rarity: query.rarity,
+        };
+      }
+
+      const stats = await this.prisma.winner.groupBy({
+        by: ['userId'],
+        where: {
+          giveaway: where,
+        },
+        _count: {
+          userId: true,
+        },
+        orderBy: {
+          _count: {
+            userId: 'desc',
+          },
+        },
+        take: 20,
+      });
+
+      if (stats.length === 0) {
+        return [];
+      }
+
+      const winnerIds = stats.map((stat) => stat.userId);
+
+      const winnerWhere: Prisma.WinnerWhereInput = {
+        giveaway: where,
+      };
+
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: winnerIds } },
+        select: {
+          id: true,
+          telegramId: true,
+          winnings: {
+            where: winnerWhere,
+            include: {
+              giveaway: {
+                include: {
+                  gift: {
+                    select: {
+                      id: true,
+                      name: true,
+                      rarity: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      const result = stats.map((stat) => {
+        const user = users.find((u) => u.id === stat.userId);
+        return {
+          user: {
+            id: user?.id,
+            telegramId: user?.telegramId,
+          },
+          winCount: stat._count.userId,
+          winnings: user?.winnings ?? [],
+        };
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to fetch winners:', error);
+      throw new HttpException(
+        'Failed to fetch winners',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -260,19 +346,13 @@ export class GiveawayService {
         where: {
           status: GiveawayStatus.ACTIVE,
         },
-        include: {
-          gift: true,
-          _count: {
-            select: {
-              entries: true,
-            },
-          },
+        select: {
+          id: true,
         },
       });
 
       for (const giveaway of giveaways) {
-        if (giveaway._count.entries < 30) {
-        }
+        await this.finishGiveaway(giveaway.id);
       }
     } catch (error) {
       this.logger.error('Failed to finish monthly giveaways:', error);
@@ -280,7 +360,101 @@ export class GiveawayService {
     }
   }
 
-  async finishGiveaway(giveawayId: string) {}
+  async finishGiveaway(giveawayId: string) {
+    try {
+      const giveaway = await this.prisma.$transaction(async (tx) => {
+        const giveaway = await tx.giveaway.findUnique({
+          where: { id: giveawayId },
+          select: {
+            status: true,
+            giftId: true,
+            entries: {
+              select: {
+                userId: true,
+                giftId: true,
+                isTradeable: true,
+              },
+            },
+          },
+        });
+
+        if (!giveaway || giveaway.status !== GiveawayStatus.ACTIVE) {
+          throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
+        }
+
+        if (giveaway.entries.length < 30) {
+          for (const entry of giveaway.entries) {
+            await tx.item.upsert({
+              where: {
+                userId_giftId_level_isTradeable: {
+                  userId: entry.userId,
+                  giftId: entry.giftId,
+                  level: Level.L10,
+                  isTradeable: entry.isTradeable,
+                },
+              },
+              update: { quantity: { increment: 1 } },
+              create: {
+                userId: entry.userId,
+                giftId: entry.giftId,
+                level: Level.L10,
+                isTradeable: entry.isTradeable,
+                quantity: 1,
+              },
+            });
+          }
+          return await tx.giveaway.update({
+            where: { id: giveawayId },
+            data: {
+              status: GiveawayStatus.CANCELLED,
+            },
+          });
+        } else {
+          const numberOfWinners = Math.min(
+            10,
+            Math.ceil(giveaway.entries.length / 30),
+          );
+          const winners = await this.getRandomItems(
+            giveaway.entries,
+            numberOfWinners,
+          );
+
+          await tx.winner.createMany({
+            data: winners.map((winner) => {
+              return {
+                giveawayId: giveawayId,
+                userId: winner.userId,
+                choice: WinnerChoice.PENDING,
+              };
+            }),
+          });
+
+          return await tx.giveaway.update({
+            where: { id: giveawayId },
+            data: {
+              status: GiveawayStatus.FINISHED,
+            },
+          });
+        }
+      });
+
+      this.logger.log(`Finished giveaway ${giveawayId}`);
+
+      return giveaway;
+    } catch (error) {
+      this.logger.error('Failed to finish giveaway:', error);
+      throw error;
+    }
+  }
+
+  private getRandomItems<T>(arr: T[], n: number): T[] {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, n);
+  }
 
   //   /**
   //    * Helper method to get random items from array

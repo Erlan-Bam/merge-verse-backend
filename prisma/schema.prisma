@@ -46,6 +46,12 @@ enum AuctionStatus {
   CANCELLED
 }
 
+enum WinnerChoice {
+  COMPENSATION
+  GIFT
+  PENDING
+}
+
 model User {
   id         String   @id @default(uuid())
   telegramId String   @unique
@@ -61,7 +67,7 @@ model User {
   inventory        Item[]
   auctions         Auction[]
   bids             Bid[]
-  giveaways        Giveaway[] @relation("GiveawayWinner")
+  winnings         Winner[] @relation("GiveawayWinner")
   entries          Entry[] @relation("GiveawayEntries")
 }
 
@@ -77,6 +83,7 @@ model Gift {
   inventory  Item[]
   auctions   Auction[]
   giveaways  Giveaway[]
+  entries    Entry[]
 }
 
 model Item {
@@ -173,6 +180,7 @@ enum GiveawayStatus {
   PENDING
   ACTIVE
   FINISHED
+  CANCELLED
 }
 
 model Giveaway {
@@ -181,26 +189,41 @@ model Giveaway {
   status     GiveawayStatus @default(PENDING)
   startAt    DateTime
   endsAt     DateTime
-  winnerId   String?
 
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
   gift       Gift           @relation(fields: [giftId], references: [id], onDelete: Cascade)
-  winner     User?          @relation("GiveawayWinner", fields: [winnerId], references: [id], onDelete: SetNull)
   entries    Entry[]
+  winners    Winner[]
 
   @@index([giftId])
-  @@index([winnerId])
   @@index([status])
   @@index([startAt])
   @@index([endsAt])
+}
+
+model Winner {
+  id          String    @id @default(uuid())
+  giveawayId  String
+  userId      String
+  choice      WinnerChoice @default(PENDING)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  user        User      @relation("GiveawayWinner", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([giveawayId])
+  @@index([userId])
 }
 
 model Entry {
   id          String    @id @default(uuid())
   giveawayId  String
   userId      String
+  giftId      String
   isTradeable Boolean 
 
   createdAt   DateTime  @default(now())
@@ -208,6 +231,7 @@ model Entry {
 
   giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
   user        User      @relation("GiveawayEntries", fields: [userId], references: [id], onDelete: Cascade)
+  gift        Gift      @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@index([giveawayId])
   @@index([userId])
