@@ -124,6 +124,22 @@ model Item {
   @@index([giftId])
 }
 
+model History {
+  id         String   @id @default(uuid())
+  userId     String
+  giftId     String
+  level      Level
+  quantity   Int
+  isTradeable Boolean
+  itemCreatedAt DateTime
+  itemUpdatedAt DateTime
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([giftId])
+}
+
 model VerticalPrice {
   id        String   @id @default(uuid())
   level     Level    @unique
@@ -243,6 +259,7 @@ model Compensation {
   id         String   @id @default(uuid())
   userId     String
   type       PackType
+  amount     Int     @default(1)
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

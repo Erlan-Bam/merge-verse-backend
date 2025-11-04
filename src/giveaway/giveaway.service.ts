@@ -1,6 +1,13 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
-import { GiveawayStatus, Level, Prisma, WinnerChoice } from '@prisma/client';
+import {
+  GiveawayStatus,
+  Level,
+  PackType,
+  Prisma,
+  Rarity,
+  WinnerChoice,
+} from '@prisma/client';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
 import { BotService } from 'src/shared/services/bot.service';
 import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
@@ -362,111 +369,120 @@ export class GiveawayService {
 
   async finishGiveaway(giveawayId: string) {
     try {
-      const { winners } = await this.prisma.$transaction(async (tx) => {
-        const giveaway = await tx.giveaway.findUnique({
-          where: { id: giveawayId },
-          select: {
-            status: true,
-            gift: {
-              select: { id: true, name: true, rarity: true },
-            },
-            entries: {
-              select: {
-                user: {
-                  select: { id: true, telegramId: true },
+      const { winners, entries } = await this.prisma.$transaction(
+        async (tx) => {
+          const giveaway = await tx.giveaway.findUnique({
+            where: { id: giveawayId },
+            select: {
+              status: true,
+              gift: {
+                select: { id: true, name: true, rarity: true },
+              },
+              entries: {
+                select: {
+                  user: {
+                    select: { id: true, telegramId: true },
+                  },
+                  giftId: true,
+                  isTradeable: true,
+                  gift: {
+                    select: { rarity: true },
+                  },
                 },
-                giftId: true,
-                isTradeable: true,
               },
             },
-          },
-        });
+          });
 
-        if (!giveaway || giveaway.status !== GiveawayStatus.ACTIVE) {
-          throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
-        }
+          if (!giveaway || giveaway.status !== GiveawayStatus.ACTIVE) {
+            throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
+          }
 
-        if (giveaway.entries.length < 30) {
-          for (const entry of giveaway.entries) {
-            await tx.item.upsert({
-              where: {
-                userId_giftId_level_isTradeable: {
+          if (giveaway.entries.length < 30) {
+            for (const entry of giveaway.entries) {
+              await tx.item.upsert({
+                where: {
+                  userId_giftId_level_isTradeable: {
+                    userId: entry.user.id,
+                    giftId: entry.giftId,
+                    level: Level.L10,
+                    isTradeable: entry.isTradeable,
+                  },
+                },
+                update: { quantity: { increment: 1 } },
+                create: {
                   userId: entry.user.id,
                   giftId: entry.giftId,
                   level: Level.L10,
                   isTradeable: entry.isTradeable,
+                  quantity: 1,
                 },
-              },
-              update: { quantity: { increment: 1 } },
-              create: {
-                userId: entry.user.id,
-                giftId: entry.giftId,
-                level: Level.L10,
-                isTradeable: entry.isTradeable,
-                quantity: 1,
+              });
+            }
+            await tx.giveaway.update({
+              where: { id: giveawayId },
+              data: {
+                status: GiveawayStatus.CANCELLED,
               },
             });
-          }
-          await tx.giveaway.update({
-            where: { id: giveawayId },
-            data: {
-              status: GiveawayStatus.CANCELLED,
-            },
-          });
-          return { winners: [] };
-        } else {
-          const numberOfWinners = Math.min(
-            10,
-            Math.ceil(giveaway.entries.length / 30),
-          );
-          const selectedWinners = this.getRandomItems(
-            giveaway.entries,
-            numberOfWinners,
-          );
+            return {
+              winners: [],
+              entries: giveaway.entries,
+            };
+          } else {
+            const numberOfWinners = Math.min(
+              10,
+              Math.ceil(giveaway.entries.length / 30),
+            );
+            const selectedWinners = this.getRandomItems(
+              giveaway.entries,
+              numberOfWinners,
+            );
 
-          const winners = await Promise.all(
-            selectedWinners.map((winner) =>
-              tx.winner.create({
-                data: {
-                  giveawayId,
-                  userId: winner.user.id,
-                  choice: WinnerChoice.PENDING,
-                  isFinished: false,
-                },
-                select: {
-                  id: true,
-                  user: {
-                    select: {
-                      id: true,
-                      telegramId: true,
-                    },
+            const winners = await Promise.all(
+              selectedWinners.map((winner) =>
+                tx.winner.create({
+                  data: {
+                    giveawayId,
+                    userId: winner.user.id,
+                    choice: WinnerChoice.PENDING,
+                    isFinished: false,
                   },
-                  giveaway: {
-                    select: {
-                      gift: {
-                        select: {
-                          name: true,
-                          rarity: true,
+                  select: {
+                    id: true,
+                    user: {
+                      select: {
+                        id: true,
+                        telegramId: true,
+                      },
+                    },
+                    giveaway: {
+                      select: {
+                        gift: {
+                          select: {
+                            name: true,
+                            rarity: true,
+                          },
                         },
                       },
                     },
                   },
-                },
-              }),
-            ),
-          );
+                }),
+              ),
+            );
 
-          await tx.giveaway.update({
-            where: { id: giveawayId },
-            data: {
-              status: GiveawayStatus.CANCELLED,
-            },
-          });
+            await tx.giveaway.update({
+              where: { id: giveawayId },
+              data: {
+                status: GiveawayStatus.FINISHED,
+              },
+            });
 
-          return { winners: winners };
-        }
-      });
+            return { winners: winners, entries: giveaway.entries };
+          }
+        },
+      );
 
+      // Send notifications to winners
       for (const winner of winners) {
         this.logger.log(
           `Notifying winner ${winner.user.telegramId} for giveaway ${giveawayId}`,
@@ -479,10 +495,64 @@ export class GiveawayService {
         );
       }
 
+      // Give compensation to all participants based on their entry gift rarity
+      for (const entry of entries) {
+        try {
+          const { packType, amount } = this.getCompensationByRarity(
+            entry.gift.rarity,
+          );
+          await this.giveCompensation(entry.user.id, packType, amount);
+          this.logger.log(
+            `Gave compensation to user ${entry.user.id}: ${amount}x ${packType} (based on ${entry.gift.rarity} gift)`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to give compensation to user ${entry.user.id}:`,
+            error,
+          );
+        }
+      }
+
       this.logger.log(`Finished giveaway ${giveawayId}`);
     } catch (error) {
       this.logger.error('Failed to finish giveaway:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get compensation pack type and amount based on gift rarity
+   */
+  private getCompensationByRarity(rarity: Rarity): {
+    packType: PackType;
+    amount: number;
+  } {
+    const map = {
+      [Rarity.COMMON]: { packType: PackType.COMMON_PACK, amount: 3 },
+      [Rarity.RARE]: { packType: PackType.RARE_PACK, amount: 4 },
+      [Rarity.EPIC]: { packType: PackType.EPIC_PACK, amount: 6 },
+      [Rarity.LEGENDARY]: { packType: PackType.LEGENDARY_PACK, amount: 3 },
+      [Rarity.MYTHIC]: { packType: PackType.LEGENDARY_PACK, amount: 12 },
+    };
+
+    return map[rarity];
+  }
+
+  async giveCompensation(userId: string, packType: PackType, amount: number) {
+    try {
+      await this.prisma.compensation.create({
+        data: {
+          userId: userId,
+          type: packType,
+          amount: amount,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to give compensation:', error);
+      throw new HttpException(
+        'Failed to give compensation',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 

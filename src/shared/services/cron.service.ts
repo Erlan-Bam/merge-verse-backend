@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from './prisma.service';
 import { GiveawayService } from 'src/giveaway/giveaway.service';
 import { AuctionService } from 'src/auction/auction.service';
-import { AuctionStatus } from '@prisma/client';
+import { AuctionStatus, PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class CronService {
@@ -63,6 +63,34 @@ export class CronService {
     this.logger.log('Starting monthly giveaway finish task');
 
     try {
+      await this.prisma.$transaction(async (tx) => {
+        // Get all items from the Item table
+        const items = await tx.item.findMany();
+
+        this.logger.log(`Found ${items.length} items to archive`);
+
+        if (items.length > 0) {
+          // Copy all items to History table
+          await tx.history.createMany({
+            data: items.map((item) => ({
+              userId: item.userId,
+              giftId: item.giftId,
+              level: item.level,
+              quantity: item.quantity,
+              isTradeable: item.isTradeable,
+              itemCreatedAt: item.createdAt,
+              itemUpdatedAt: item.updatedAt,
+            })),
+          });
+
+          this.logger.log(`Archived ${items.length} items to history`);
+
+          // Delete all items from the Item table
+          const result = await tx.item.deleteMany();
+          this.logger.log(`Deleted ${result.count} items from inventory`);
+        }
+      });
+
       await this.giveawayService.finishMonthlyGiveaways();
       this.logger.log('Monthly giveaways finished successfully');
     } catch (error) {
@@ -79,7 +107,6 @@ export class CronService {
     this.logger.log('Starting expired auctions check');
 
     try {
-      // Find all active auctions that have expired
       const auctions = await this.prisma.auction.findMany({
         where: {
           status: AuctionStatus.ACTIVE,
@@ -128,5 +155,33 @@ export class CronService {
     }
   }
 
-  async handleExpiredPayments() {}
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleExpiredPayments() {
+    try {
+      const payments = await this.prisma.payment.updateMany({
+        where: {
+          status: PaymentStatus.PENDING,
+          createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+        data: { status: PaymentStatus.FAILED },
+      });
+      this.logger.log(`Expired payments updated: ${payments.count}`);
+    } catch (error) {
+      this.logger.error('Failed to process expired payments:', error);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async deleteExpiredCompensations() {
+    try {
+      const result = await this.prisma.compensation.deleteMany({
+        where: {
+          createdAt: { lt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000) },
+        },
+      });
+      this.logger.log(`Deleted ${result.count} expired compensations`);
+    } catch (error) {
+      this.logger.error('Failed to delete expired compensations:', error);
+    }
+  }
 }

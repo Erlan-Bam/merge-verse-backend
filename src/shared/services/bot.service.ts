@@ -221,7 +221,6 @@ Click the button below to launch the game!
         `Failed to send winner notification to ${telegramId}:`,
         error,
       );
-      throw error;
     }
   }
 }
