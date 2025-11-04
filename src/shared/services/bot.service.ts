@@ -69,7 +69,7 @@ Click the button below to launch the game!
     // Handle callback queries for winner choice
     this.bot.callbackQuery(/^winner_choice:(.+):(.+)$/, async (ctx) => {
       try {
-        const [, winnerId, choice] = ctx.match as RegExpMatchArray;
+        const [_, winnerId, choice] = ctx.match as RegExpMatchArray;
         const telegramId = ctx.from.id.toString();
         const messages = getMessages('ru');
 

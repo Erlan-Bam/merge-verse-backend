@@ -18,6 +18,17 @@ enum Role {
   ADMIN
 }
 
+enum PackType {
+  COMMON_PACK
+  RARE_PACK
+  EPIC_PACK
+  LEGENDARY_PACK
+}
+
+enum Provider {
+  NOWPAYMENTS
+}
+
 enum Rarity {
   COMMON
   RARE
@@ -38,6 +49,12 @@ enum Level {
   L8
   L9
   L10
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }
 
 enum AuctionStatus {
@@ -67,6 +84,8 @@ model User {
   inventory        Item[]
   auctions         Auction[]
   bids             Bid[]
+  payments         Payment[]
+  compensations    Compensation[]
   winnings         Winner[] @relation("GiveawayWinner")
   entries          Entry[] @relation("GiveawayEntries")
 }
@@ -220,6 +239,19 @@ model Winner {
   @@index([userId])
 }
 
+model Compensation {
+  id         String   @id @default(uuid())
+  userId     String
+  type       PackType
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model Entry {
   id          String    @id @default(uuid())
   giveawayId  String
@@ -235,5 +267,21 @@ model Entry {
   gift        Gift      @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@index([giveawayId])
+  @@index([userId])
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  userId     String
+  amount     Decimal
+  provider   Provider
+  status     PaymentStatus @default(PENDING)
+  externalId String?  @unique
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }

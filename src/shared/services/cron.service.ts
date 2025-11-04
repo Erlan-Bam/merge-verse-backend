@@ -127,4 +127,6 @@ export class CronService {
       this.logger.error('Failed to process expired auctions:', error);
     }
   }
+
+  async handleExpiredPayments() {}
 }
