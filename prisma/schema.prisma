@@ -76,10 +76,14 @@ model User {
   balance    Decimal  @default(0)
   streak     Int      @default(0)
   isBanned   Boolean  @default(false)
+  referredBy String?
 
   activeAt   DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  referrer         User?    @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
+  referrals        User[]   @relation("UserReferrals")
 
   inventory        Item[]
   auctions         Auction[]
@@ -88,6 +92,8 @@ model User {
   compensations    Compensation[]
   winnings         Winner[] @relation("GiveawayWinner")
   entries          Entry[] @relation("GiveawayEntries")
+
+  @@index([referredBy])
 }
 
 model Gift {

@@ -41,7 +41,7 @@ export class CollectionService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to get collection: ', error);
-      throw error;
+      throw new HttpException('Collection retrieval failed', 500);
     }
   }
 
@@ -108,7 +108,7 @@ export class CollectionService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to check collection: ', error);
-      throw error;
+      throw new HttpException('Collection check failed', 500);
     }
   }
 
@@ -236,7 +236,7 @@ export class CollectionService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to craft card: ', error);
-      throw error;
+      throw new HttpException('Card crafting failed', 500);
     }
   }
 
@@ -319,7 +319,7 @@ export class CollectionService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to claim vertical prize: ', error);
-      throw error;
+      throw new HttpException('Vertical prize claiming failed', 500);
     }
   }
 
@@ -423,7 +423,90 @@ export class CollectionService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to claim horizontal prize: ', error);
-      throw error;
+      throw new HttpException('Horizontal prize claiming failed', 500);
+    }
+  }
+
+  async getFullPrize(userId: string) {
+    if (this.vertical.length === 0 || this.horizontal.length === 0) {
+      await this.setPrices();
+    }
+
+    try {
+      const collection = await this.giftService.getUserGifts(userId);
+      const allGifts = await this.giftService.getAllGifts();
+      const levels = this.vertical.map((v) => v.level);
+
+      for (const level of levels) {
+        for (const gift of allGifts) {
+          const hasGift = collection.some(
+            (i) => i.level === level && i.gift.id === gift.id,
+          );
+
+          if (!hasGift) {
+            throw new HttpException(
+              `Missing gift ${gift.name} (${gift.rarity}) at level ${level}`,
+              400,
+            );
+          }
+        }
+      }
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.update({
+          where: { id: userId },
+          data: { balance: { increment: 450 } },
+          select: { id: true, balance: true, referredBy: true },
+        });
+
+        // Increment referrer's balance if user was referred
+        if (user.referredBy) {
+          await tx.user.update({
+            where: { id: user.referredBy },
+            data: { balance: { increment: 22.5 } },
+          });
+        }
+
+        for (const level of levels) {
+          for (const gift of allGifts) {
+            const item = await tx.item.findFirst({
+              where: {
+                userId,
+                giftId: gift.id,
+                level,
+              },
+              orderBy: { isTradeable: 'asc' },
+            });
+
+            if (!item) continue;
+
+            if (item.quantity > 1) {
+              await tx.item.update({
+                where: { id: item.id },
+                data: { quantity: { decrement: 1 } },
+              });
+            } else {
+              await tx.item.delete({ where: { id: item.id } });
+            }
+          }
+        }
+
+        return {
+          prize: 450,
+          newBalance: user.balance.toNumber(),
+        };
+      });
+
+      return {
+        success: true,
+        message: 'Full collection complete — grand prize claimed!',
+        prize: result.prize,
+        newBalance: result.newBalance,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to claim full prize: ', error);
+      throw new HttpException('Full prize claiming failed', 500);
     }
   }
 

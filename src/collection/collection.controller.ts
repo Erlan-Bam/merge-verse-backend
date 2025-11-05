@@ -352,4 +352,9 @@ export class CollectionController {
       data.rarity,
     );
   }
+
+  @Post('full-prize')
+  async fullPrize(@User('id') userId: string) {
+    return this.collectionService.getFullPrize(userId);
+  }
 }
