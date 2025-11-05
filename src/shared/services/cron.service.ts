@@ -82,13 +82,16 @@ export class CronService {
 
       if (activeToFinish.length > 0) {
         this.logger.log(`Found ${activeToFinish.length} giveaways to finish`);
-        
+
         for (const giveaway of activeToFinish) {
           try {
             await this.giveawayService.finishGiveaway(giveaway.id);
             this.logger.log(`Finished giveaway ${giveaway.id}`);
           } catch (error) {
-            this.logger.error(`Failed to finish giveaway ${giveaway.id}:`, error);
+            this.logger.error(
+              `Failed to finish giveaway ${giveaway.id}:`,
+              error,
+            );
           }
         }
       } else {
