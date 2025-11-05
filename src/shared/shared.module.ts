@@ -7,6 +7,7 @@ import { BotService } from './services/bot.service';
 import { ConfigService } from '@nestjs/config';
 import { GiveawayModule } from 'src/giveaway/giveaway.module';
 import { AuctionModule } from 'src/auction/auction.module';
+import { ReferralService } from './services/referral.service';
 
 @Global()
 @Module({
@@ -21,7 +22,20 @@ import { AuctionModule } from 'src/auction/auction.module';
     forwardRef(() => GiveawayModule),
     forwardRef(() => AuctionModule),
   ],
-  providers: [PrismaService, BotService, CronService, JwtStrategy],
-  exports: [PrismaService, BotService, CronService, JwtStrategy, JwtModule],
+  providers: [
+    PrismaService,
+    BotService,
+    CronService,
+    JwtStrategy,
+    ReferralService,
+  ],
+  exports: [
+    PrismaService,
+    BotService,
+    CronService,
+    JwtStrategy,
+    JwtModule,
+    ReferralService,
+  ],
 })
 export class SharedModule {}

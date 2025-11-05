@@ -234,6 +234,25 @@ const prices = [
   { level: Level.L10, rarity: Rarity.MYTHIC, price: 1601.024 },
 ];
 
+// Referral settings
+const referralSettings = [
+  {
+    name: 'REFERRAL_FIRST_LEVEL',
+    type: 'PERCENTAGE',
+    value: 4, // 4%
+  },
+  {
+    name: 'REFERRAL_SECOND_LEVEL',
+    type: 'PERCENTAGE',
+    value: 2, // 2%
+  },
+  {
+    name: 'REFERRAL_FULL_COLLECTION',
+    type: 'FIXED',
+    value: 22.5, // $22.50
+  },
+];
+
 async function main() {
   console.log('🌱 Seeding database...');
 
@@ -288,6 +307,22 @@ async function main() {
   //   ),
   // );
   // console.log(`✅ Created ${createdHorizontalPrices.length} horizontal prices`);
+
+  // Create referral settings
+  console.log('🎁 Creating referral settings...');
+  await prisma.referralSettings.deleteMany();
+  const createdReferralSettings = await Promise.all(
+    referralSettings.map((setting) =>
+      prisma.referralSettings.create({
+        data: {
+          name: setting.name as any,
+          type: setting.type as any,
+          value: setting.value,
+        },
+      }),
+    ),
+  );
+  console.log(`✅ Created ${createdReferralSettings.length} referral settings`);
 
   console.log('✨ Seeding completed successfully!');
 }

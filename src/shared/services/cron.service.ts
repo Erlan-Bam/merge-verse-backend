@@ -4,6 +4,7 @@ import { PrismaService } from './prisma.service';
 import { GiveawayService } from 'src/giveaway/giveaway.service';
 import { AuctionService } from 'src/auction/auction.service';
 import { AuctionStatus, PaymentStatus } from '@prisma/client';
+import { ReferralService } from './referral.service';
 
 @Injectable()
 export class CronService {
@@ -13,6 +14,7 @@ export class CronService {
     private readonly prisma: PrismaService,
     private readonly giveawayService: GiveawayService,
     private readonly auctionService: AuctionService,
+    private readonly referralService: ReferralService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -182,6 +184,16 @@ export class CronService {
       this.logger.log(`Deleted ${result.count} expired compensations`);
     } catch (error) {
       this.logger.error('Failed to delete expired compensations:', error);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async refreshReferralSettings() {
+    try {
+      await this.referralService.loadSettings();
+      this.logger.log('Referral settings refreshed successfully');
+    } catch (error) {
+      this.logger.error('Failed to refresh referral settings:', error);
     }
   }
 }

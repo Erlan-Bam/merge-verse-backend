@@ -2,9 +2,14 @@ import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { NowpaymentService } from './services/nowpayment.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
-import { PaymentStatus, Provider } from '@prisma/client';
+import { PaymentStatus, PayoutStatus, Provider } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { NowpaymentNotificationDto } from './dto/nowpayment.dto';
+import {
+  NowpaymentNotificationDto,
+  NowpaymentPayoutNotificationDto,
+} from './dto/nowpayment.dto';
+import { ReferralService } from 'src/shared/services/referral.service';
+import { CreatePayoutDto } from './dto/create-payout.dto';
 
 @Injectable()
 export class PaymentService {
@@ -16,6 +21,7 @@ export class PaymentService {
     private prisma: PrismaService,
     private nowpaymentService: NowpaymentService,
     private configService: ConfigService,
+    private referralService: ReferralService,
   ) {
     this.SUCCESS_URL = this.configService.get<string>('PAYMENT_SUCCESS_URL');
     this.CANCEL_URL = this.configService.get<string>('PAYMENT_CANCEL_URL');
@@ -35,19 +41,77 @@ export class PaymentService {
 
       if (data.provider === Provider.NOWPAYMENTS) {
         return await this.nowpaymentService.createInvoice({
-          price_amount: data.amount,
+          price_amount: Number((data.amount / 0.99).toFixed(2)),
           price_currency: 'usd',
           order_id: payment.id,
           order_description: 'Merge Verse balance top-up',
           success_url: this.SUCCESS_URL,
           cancel_url: this.CANCEL_URL,
           ipn_callback_url: `${this.CALLBACK_URL}/nowpayment/notification`,
+          is_fee_paid_by_user: true,
         });
       }
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to create invoice:', error);
       throw new HttpException('Failed to create invoice', 500);
+    }
+  }
+
+  async createPayout(userId: string, data: CreatePayoutDto) {
+    try {
+      const isValid = await this.nowpaymentService.validate(data.address);
+      if (!isValid) {
+        throw new HttpException('Invalid payout address', 400);
+      }
+
+      const fee = await this.nowpaymentService.getPayoutFee(
+        data.amount,
+        'usdt',
+      );
+
+      const totalAmount = data.amount / 0.94 + fee;
+
+      await this.prisma.$transaction(async (tx) => {
+        const decrement = await tx.user.updateMany({
+          where: {
+            id: userId,
+            balance: { gte: totalAmount },
+          },
+          data: {
+            balance: { decrement: totalAmount },
+          },
+        });
+
+        if (decrement.count === 0) {
+          throw new HttpException(
+            'Insufficient balance or concurrent modification',
+            400,
+          );
+        }
+
+        const payout = await tx.payout.create({
+          data: {
+            userId: userId,
+            amount: data.amount,
+            status: PayoutStatus.PROCESSING,
+          },
+        });
+
+        await this.nowpaymentService.createPayout({
+          address: data.address,
+          amount: totalAmount,
+          currency: 'usdt',
+          unique_external_id: payout.id,
+          ipn_callback_url: `${this.CALLBACK_URL}/nowpayment/payout/notification`,
+        });
+      });
+
+      return { status: 'ok', message: 'Payout created successfully' };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to create payout:', error);
+      throw new HttpException('Failed to create payout', 500);
     }
   }
 
@@ -103,6 +167,7 @@ export class PaymentService {
           },
         });
 
+        // Update user balance
         await tx.user.update({
           where: { id: payment.userId },
           data: {
@@ -112,9 +177,124 @@ export class PaymentService {
           },
         });
 
+        // Process referral commissions
+        const referrals = await this.referralService.processDepositReferrals(
+          payment.userId,
+          payment.amount.toNumber(),
+        );
+
+        // First level referral (direct referrer) - 4%
+        if (referrals.firstLevel) {
+          await tx.user.update({
+            where: { id: referrals.firstLevel.userId },
+            data: {
+              balance: { increment: referrals.firstLevel.amount },
+            },
+          });
+
+          this.logger.log(
+            `First level referral: User ${referrals.firstLevel.userId} earned ${referrals.firstLevel.amount} from ${payment.userId}'s deposit`,
+          );
+        }
+
+        // Second level referral (referrer of referrer) - 2%
+        if (referrals.secondLevel) {
+          await tx.user.update({
+            where: { id: referrals.secondLevel.userId },
+            data: {
+              balance: { increment: referrals.secondLevel.amount },
+            },
+          });
+
+          this.logger.log(
+            `Second level referral: User ${referrals.secondLevel.userId} earned ${referrals.secondLevel.amount} from ${payment.userId}'s deposit`,
+          );
+        }
+
         this.logger.log(
           `Payment completed: ${payment.id}, User: ${payment.userId}, Amount: ${payment.amount}`,
         );
+      });
+
+      return {
+        status: 'ok',
+        message: 'Payment processed successfully',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to process notification:', error);
+      throw new HttpException('Failed to process notification', 500);
+    }
+  }
+
+  async nowpaymentPayoutNotification(
+    data: NowpaymentPayoutNotificationDto,
+    signature: string,
+  ) {
+    try {
+      const isValid = await this.nowpaymentService.verifySignature(
+        data,
+        signature,
+      );
+      if (!isValid) {
+        this.logger.warn('Invalid signature for notification', {
+          payout_id: data.unique_external_id,
+        });
+        throw new HttpException('Invalid signature', 403);
+      }
+
+      if (data.status.toLowerCase() === 'failed') {
+        if (!data.unique_external_id) {
+          this.logger.error('Missing unique_external_id in notification', data);
+          throw new HttpException('Missing unique_external_id', 400);
+        }
+        await this.prisma.$transaction(async (tx) => {
+          const payout = await tx.payout.update({
+            where: { id: data.unique_external_id },
+            data: { status: PayoutStatus.FAILED },
+          });
+          await tx.user.update({
+            where: { id: payout.userId },
+            data: { balance: { increment: payout.amount } },
+          });
+        });
+      }
+
+      if (data.status.toLowerCase() !== 'finished') {
+        this.logger.log(`Payment ${data.id} status: ${data.status}`);
+        return { status: 'ok', message: 'Payment not finished yet' };
+      }
+
+      if (!data.unique_external_id) {
+        this.logger.error('Missing unique_external_id in notification', data);
+        throw new HttpException('Missing unique_external_id', 400);
+      }
+
+      const payout = await this.prisma.payout.findUnique({
+        where: { id: data.unique_external_id },
+        include: { user: true },
+      });
+
+      if (!payout) {
+        this.logger.error(`Payment not found: ${data.unique_external_id}`);
+        throw new HttpException('Payment not found', 404);
+      }
+
+      if (payout.status !== PayoutStatus.PROCESSING) {
+        this.logger.warn(
+          `Payment already completed: ${data.unique_external_id}`,
+        );
+        return { status: 'ok', message: 'Payment already processed' };
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.payout.update({
+          where: { id: payout.id },
+          data: {
+            status: PayoutStatus.COMPLETED,
+            externalId: data.id.toString(),
+          },
+        });
       });
 
       return {

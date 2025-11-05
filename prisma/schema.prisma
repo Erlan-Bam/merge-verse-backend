@@ -57,6 +57,12 @@ enum PaymentStatus {
   FAILED
 }
 
+enum PayoutStatus {
+  COMPLETED
+  PROCESSING
+  FAILED
+}
+
 enum AuctionStatus {
   ACTIVE
   FINISHED
@@ -67,6 +73,17 @@ enum WinnerChoice {
   COMPENSATION
   GIFT
   PENDING
+}
+
+enum ValueType {
+  FIXED
+  PERCENTAGE
+}
+
+enum ReferralSettingsName {
+  REFERRAL_FIRST_LEVEL
+  REFERRAL_SECOND_LEVEL
+  REFERRAL_FULL_COLLECTION
 }
 
 model User {
@@ -92,6 +109,7 @@ model User {
   compensations    Compensation[]
   winnings         Winner[] @relation("GiveawayWinner")
   entries          Entry[] @relation("GiveawayEntries")
+  payouts          Payout[]
 
   @@index([referredBy])
 }
@@ -307,4 +325,29 @@ model Payment {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Payout {
+  id         String   @id @default(uuid())
+  userId     String
+  amount     Decimal
+  status     PayoutStatus @default(PROCESSING)
+  externalId String?  @unique
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ReferralSettings {
+  id                String   @id @default(uuid())
+  name              ReferralSettingsName @unique
+  type              ValueType
+  value             Decimal
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

@@ -9,6 +9,7 @@ import {
 import { GiftService } from 'src/gift/gift.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { CraftCardDto } from './dto/craft-card.dto';
+import { ReferralService } from 'src/shared/services/referral.service';
 
 @Injectable()
 export class CollectionService {
@@ -18,6 +19,7 @@ export class CollectionService {
   constructor(
     private giftService: GiftService,
     private prisma: PrismaService,
+    private referralService: ReferralService,
   ) {
     this.setPrices().catch((error) => {
       this.logger.error(error);
@@ -461,10 +463,15 @@ export class CollectionService {
 
         // Increment referrer's balance if user was referred
         if (user.referredBy) {
+          const referralBonus = this.referralService.getFullCollectionBonus();
           await tx.user.update({
             where: { id: user.referredBy },
-            data: { balance: { increment: 22.5 } },
+            data: { balance: { increment: referralBonus } },
           });
+
+          this.logger.log(
+            `Referral bonus: User ${user.referredBy} earned ${referralBonus} for ${userId}'s full collection completion`,
+          );
         }
 
         for (const level of levels) {
