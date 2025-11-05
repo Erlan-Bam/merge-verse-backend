@@ -236,7 +236,6 @@ export class GiveawayService {
             userId: 'desc',
           },
         },
-        take: 20,
       });
 
       if (stats.length === 0) {
@@ -276,12 +275,28 @@ export class GiveawayService {
 
       const result = stats.map((stat) => {
         const user = users.find((u) => u.id === stat.userId);
+
+        // Count wins by rarity
+        const winsByRarity = {
+          [Rarity.COMMON]: 0,
+          [Rarity.RARE]: 0,
+          [Rarity.EPIC]: 0,
+          [Rarity.LEGENDARY]: 0,
+          [Rarity.MYTHIC]: 0,
+        };
+
+        user?.winnings.forEach((winning) => {
+          const rarity = winning.giveaway.gift.rarity;
+          winsByRarity[rarity]++;
+        });
+
         return {
           user: {
             id: user?.id,
             telegramId: user?.telegramId,
           },
-          winCount: stat._count.userId,
+          totalWins: stat._count.userId,
+          winsByRarity,
           winnings: user?.winnings ?? [],
         };
       });
