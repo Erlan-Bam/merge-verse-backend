@@ -2,6 +2,9 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { ReferralService } from 'src/shared/services/referral.service';
 import { UpdateReferralSettingsDto } from './dto/update-referral-settings.dto';
+import { UpdateGiveawayDto } from './dto/update-giveaway.dto';
+import { ToggleGiveawayDto } from './dto/toggle-giveaway.dto';
+import { GiveawayStatus } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -87,6 +90,125 @@ export class AdminService {
       this.logger.error('Failed to update referral settings:', error);
       throw new HttpException(
         'Failed to update referral settings',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getAllGiveaways() {
+    try {
+      const giveaways = await this.prisma.giveaway.findMany({
+        include: {
+          gift: {
+            select: {
+              id: true,
+              name: true,
+              rarity: true,
+              url: true,
+            },
+          },
+          winners: {
+            select: {
+              id: true,
+              userId: true,
+            },
+          },
+          _count: {
+            select: {
+              entries: true,
+            },
+          },
+        },
+        orderBy: {
+          startAt: 'asc',
+        },
+      });
+
+      return giveaways;
+    } catch (error) {
+      this.logger.error('Failed to get all giveaways:', error);
+      throw new HttpException(
+        'Failed to get all giveaways',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateGiveaway(giveawayId: string, data: UpdateGiveawayDto) {
+    try {
+      const giveaway = await this.prisma.giveaway.findUnique({
+        where: { id: giveawayId },
+      });
+
+      if (!giveaway) {
+        throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
+      }
+
+      const updateData: any = {};
+
+      if (data.startAt) {
+        updateData.startAt = new Date(data.startAt);
+      }
+
+      if (data.endsAt) {
+        updateData.endsAt = new Date(data.endsAt);
+      }
+
+      if (data.status) {
+        updateData.status = data.status;
+      }
+
+      const updated = await this.prisma.giveaway.update({
+        where: { id: giveawayId },
+        data: updateData,
+        include: {
+          gift: true,
+        },
+      });
+
+      this.logger.log(`Giveaway ${giveawayId} updated`);
+
+      return updated;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to update giveaway:', error);
+      throw new HttpException(
+        'Failed to update giveaway',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async toggleGiveaway(giveawayId: string, data: ToggleGiveawayDto) {
+    try {
+      const giveaway = await this.prisma.giveaway.findUnique({
+        where: { id: giveawayId },
+      });
+
+      if (!giveaway) {
+        throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
+      }
+
+      const newStatus = data.active 
+        ? GiveawayStatus.ACTIVE 
+        : GiveawayStatus.CANCELLED;
+
+      const updated = await this.prisma.giveaway.update({
+        where: { id: giveawayId },
+        data: { status: newStatus },
+        include: {
+          gift: true,
+        },
+      });
+
+      this.logger.log(`Giveaway ${giveawayId} toggled to ${newStatus}`);
+
+      return updated;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to toggle giveaway:', error);
+      throw new HttpException(
+        'Failed to toggle giveaway',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

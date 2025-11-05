@@ -39,6 +39,69 @@ export class CronService {
   }
 
   /**
+   * Check and manage giveaways daily at 00:01 UTC
+   * - Start PENDING giveaways that reached their start date
+   * - Finish ACTIVE giveaways that reached their end date
+   */
+  @Cron('1 0 * * *', {
+    timeZone: 'UTC',
+  })
+  async handleDailyGiveawayCheck() {
+    this.logger.log('Starting daily giveaway check task');
+
+    try {
+      const now = new Date();
+
+      // Start PENDING giveaways that should be active now
+      const pendingToStart = await this.prisma.giveaway.updateMany({
+        where: {
+          status: 'PENDING',
+          startAt: {
+            lte: now,
+          },
+        },
+        data: {
+          status: 'ACTIVE',
+        },
+      });
+
+      this.logger.log(`Started ${pendingToStart.count} pending giveaways`);
+
+      // Get ACTIVE giveaways that should be finished
+      const activeToFinish = await this.prisma.giveaway.findMany({
+        where: {
+          status: 'ACTIVE',
+          endsAt: {
+            lte: now,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (activeToFinish.length > 0) {
+        this.logger.log(`Found ${activeToFinish.length} giveaways to finish`);
+        
+        for (const giveaway of activeToFinish) {
+          try {
+            await this.giveawayService.finishGiveaway(giveaway.id);
+            this.logger.log(`Finished giveaway ${giveaway.id}`);
+          } catch (error) {
+            this.logger.error(`Failed to finish giveaway ${giveaway.id}:`, error);
+          }
+        }
+      } else {
+        this.logger.log('No active giveaways to finish');
+      }
+
+      this.logger.log('Daily giveaway check completed successfully');
+    } catch (error) {
+      this.logger.error('Failed to perform daily giveaway check:', error);
+    }
+  }
+
+  /**
    * Start monthly giveaways on the 2nd of each month at 00:01 UTC
    */
   @Cron('1 0 2 * *', {
@@ -57,6 +120,7 @@ export class CronService {
 
   /**
    * Finish monthly giveaways on the 1st of each month at 00:01 UTC
+   * This is now handled by handleDailyGiveawayCheck, but kept for manual/backup purposes
    */
   @Cron('1 0 1 * *', {
     timeZone: 'UTC',
@@ -93,8 +157,7 @@ export class CronService {
         }
       });
 
-      await this.giveawayService.finishMonthlyGiveaways();
-      this.logger.log('Monthly giveaways finished successfully');
+      this.logger.log('Monthly giveaway finish task completed successfully');
     } catch (error) {
       this.logger.error('Failed to finish monthly giveaways:', error);
     }
