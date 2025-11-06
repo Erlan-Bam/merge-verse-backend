@@ -7,6 +7,7 @@ import {
   UseGuards,
   Param,
   Post,
+  Delete,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AdminGuard } from 'src/shared/guards/admin.guard';
@@ -18,6 +19,8 @@ import { ToggleGiveawayDto } from './dto/toggle-giveaway.dto';
 import { UpdateGiveawayStepsDto } from './dto/update-giveaway-steps.dto';
 import { ToggleCollectionVisibleDto } from './dto/toggle-collection-visible.dto';
 import { ArchiveUserItemsDto } from './dto/archive-items.dto';
+import { ToggleUserBanDto } from './dto/toggle-user-ban.dto';
+import { DeleteUserDto } from './dto/delete-user.dto';
 
 @Controller('admin')
 @ApiTags('Admin')
@@ -212,5 +215,104 @@ export class AdminController {
   })
   async archiveAllUsersItems() {
     return this.adminService.archiveAllUsersItems();
+  }
+
+  @Patch('user/ban')
+  @ApiOperation({
+    summary: 'Ban or unban a user',
+    description:
+      'Toggle the ban status of a user. Banned users will not be able to access the system. Admin users cannot be banned.',
+  })
+  @ApiBody({ type: ToggleUserBanDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User ban status updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        user: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440000',
+            },
+            telegramId: { type: 'string', example: '123456789' },
+            isBanned: { type: 'boolean', example: true },
+            role: { type: 'string', example: 'USER' },
+          },
+        },
+        message: {
+          type: 'string',
+          example: 'User 123456789 banned successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot ban admin users',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async toggleUserBan(@Body() data: ToggleUserBanDto) {
+    return this.adminService.toggleUserBan(data.userId, data.isBanned);
+  }
+
+  @Delete('user')
+  @ApiOperation({
+    summary: 'Delete a user',
+    description:
+      'Permanently delete a user and all their related data (items, auctions, bids, payments, etc.). Admin users cannot be deleted. Use with caution as this action is irreversible.',
+  })
+  @ApiBody({ type: DeleteUserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        deletedUserId: {
+          type: 'string',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+        telegramId: { type: 'string', example: '123456789' },
+        message: {
+          type: 'string',
+          example: 'User 123456789 deleted successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot delete admin users',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async deleteUser(@Body() data: DeleteUserDto) {
+    return this.adminService.deleteUser(data.userId);
   }
 }

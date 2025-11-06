@@ -438,4 +438,107 @@ export class AdminService {
       );
     }
   }
+
+  async toggleUserBan(userId: string, isBanned: boolean) {
+    try {
+      // Verify user exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          isBanned: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Prevent banning admin users
+      if (user.role === 'ADMIN') {
+        throw new HttpException(
+          'Cannot ban admin users',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Update ban status
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: { isBanned },
+        select: {
+          id: true,
+          telegramId: true,
+          isBanned: true,
+          role: true,
+        },
+      });
+
+      this.logger.log(
+        `User ${updatedUser.telegramId} ${isBanned ? 'banned' : 'unbanned'}`,
+      );
+
+      return {
+        success: true,
+        user: updatedUser,
+        message: `User ${updatedUser.telegramId} ${isBanned ? 'banned' : 'unbanned'} successfully`,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to toggle user ban:', error);
+      throw new HttpException(
+        'Failed to toggle user ban',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteUser(userId: string) {
+    try {
+      // Verify user exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          role: true,
+        },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Prevent deleting admin users
+      if (user.role === 'ADMIN') {
+        throw new HttpException(
+          'Cannot delete admin users',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Delete user (cascade will handle related records)
+      await this.prisma.user.delete({
+        where: { id: userId },
+      });
+
+      this.logger.log(`User ${user.telegramId} deleted successfully`);
+
+      return {
+        success: true,
+        deletedUserId: userId,
+        telegramId: user.telegramId,
+        message: `User ${user.telegramId} deleted successfully`,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to delete user:', error);
+      throw new HttpException(
+        'Failed to delete user',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
