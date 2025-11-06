@@ -164,6 +164,10 @@ model History {
   @@index([giftId])
 }
 
+enum SystemSettingsName {
+  GIVEAWAY_STEPS
+}
+
 model VerticalPrice {
   id        String   @id @default(uuid())
   level     Level    @unique
@@ -340,6 +344,15 @@ model Payout {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model SystemSettings {
+  id        String   @id @default(uuid())
+  name      SystemSettingsName @unique
+  value     Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ReferralSettings {

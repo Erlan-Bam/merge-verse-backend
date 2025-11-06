@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import {
   GiveawayStatus,
@@ -6,6 +12,7 @@ import {
   PackType,
   Prisma,
   Rarity,
+  SystemSettingsName,
   WinnerChoice,
 } from '@prisma/client';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
@@ -13,16 +20,61 @@ import { BotService } from 'src/shared/services/bot.service';
 import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GiftService } from 'src/gift/gift.service';
 import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
+import { GiveawaySteps } from './types/steps.types';
 
 @Injectable()
-export class GiveawayService {
+export class GiveawayService implements OnModuleInit {
   private readonly logger = new Logger(GiveawayService.name);
+  private steps: number = 30; // Default value
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly botService: BotService,
     private readonly giftService: GiftService,
   ) {}
+
+  async onModuleInit() {
+    await this.loadGiveawaySteps();
+  }
+
+  /**
+   * Load giveaway steps from database and cache in memory
+   */
+  async loadGiveawaySteps() {
+    try {
+      const settings = await this.prisma.systemSettings.findUnique({
+        where: { name: SystemSettingsName.GIVEAWAY_STEPS },
+      });
+
+      if (settings) {
+        this.steps = (settings.value as GiveawaySteps).steps;
+        this.logger.log(`Loaded giveaway steps: ${this.steps}`);
+      } else {
+        // Initialize with default value if not exists
+        await this.prisma.systemSettings.create({
+          data: {
+            name: SystemSettingsName.GIVEAWAY_STEPS,
+            value: { steps: 30 },
+          },
+        });
+        this.steps = 30;
+        this.logger.log('Initialized giveaway steps with default value: 30');
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to load giveaway steps, using default (30):',
+        error,
+      );
+      this.steps = 30;
+    }
+  }
+
+  /**
+   * Get current giveaway steps value
+   */
+  getGiveawaySteps(): number {
+    return this.steps;
+  }
 
   async getGiveaways(query: GetGiveawaysDto) {
     try {
@@ -412,7 +464,7 @@ export class GiveawayService {
             throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
           }
 
-          if (giveaway.entries.length < 30) {
+          if (giveaway.entries.length < this.steps) {
             for (const entry of giveaway.entries) {
               await tx.item.upsert({
                 where: {
@@ -446,7 +498,7 @@ export class GiveawayService {
           } else {
             const numberOfWinners = Math.min(
               10,
-              Math.ceil(giveaway.entries.length / 30),
+              Math.ceil(giveaway.entries.length / this.steps),
             );
             const selectedWinners = this.getRandomItems(
               giveaway.entries,

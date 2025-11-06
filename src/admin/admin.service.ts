@@ -4,14 +4,17 @@ import { ReferralService } from 'src/shared/services/referral.service';
 import { UpdateReferralSettingsDto } from './dto/update-referral-settings.dto';
 import { UpdateGiveawayDto } from './dto/update-giveaway.dto';
 import { ToggleGiveawayDto } from './dto/toggle-giveaway.dto';
-import { GiveawayStatus } from '@prisma/client';
-
+import { UpdateGiveawayStepsDto } from './dto/update-giveaway-steps.dto';
+import { GiveawayStatus, SystemSettingsName } from '@prisma/client';
+import { GiveawayService } from 'src/giveaway/giveaway.service';
+import { GiveawaySteps } from 'src/giveaway/types/steps.types';
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
   constructor(
     private prisma: PrismaService,
     private referralService: ReferralService,
+    private giveawayService: GiveawayService,
   ) {}
   async getWinnersChoices() {
     try {
@@ -189,8 +192,8 @@ export class AdminService {
         throw new HttpException('Giveaway not found', HttpStatus.NOT_FOUND);
       }
 
-      const newStatus = data.active 
-        ? GiveawayStatus.ACTIVE 
+      const newStatus = data.active
+        ? GiveawayStatus.ACTIVE
         : GiveawayStatus.CANCELLED;
 
       const updated = await this.prisma.giveaway.update({
@@ -209,6 +212,53 @@ export class AdminService {
       this.logger.error('Failed to toggle giveaway:', error);
       throw new HttpException(
         'Failed to toggle giveaway',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getGiveawaySteps() {
+    try {
+      const settings = await this.prisma.systemSettings.findUnique({
+        where: { name: SystemSettingsName.GIVEAWAY_STEPS },
+      });
+
+      if (settings) {
+        return settings.value as GiveawaySteps;
+      }
+
+      return { steps: 30 }; // Default value
+    } catch (error) {
+      this.logger.error('Failed to get giveaway steps:', error);
+      throw new HttpException(
+        'Failed to get giveaway steps',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateGiveawaySteps(data: UpdateGiveawayStepsDto) {
+    try {
+      const updated = await this.prisma.systemSettings.upsert({
+        where: { name: SystemSettingsName.GIVEAWAY_STEPS },
+        update: {
+          value: { steps: data.steps },
+        },
+        create: {
+          name: SystemSettingsName.GIVEAWAY_STEPS,
+          value: { steps: data.steps },
+        },
+      });
+
+      await this.giveawayService.loadGiveawaySteps();
+
+      this.logger.log(`Giveaway steps updated to: ${data.steps}`);
+
+      return updated.value as GiveawaySteps;
+    } catch (error) {
+      this.logger.error('Failed to update giveaway steps:', error);
+      throw new HttpException(
+        'Failed to update giveaway steps',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
