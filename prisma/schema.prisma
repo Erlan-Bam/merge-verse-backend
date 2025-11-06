@@ -166,6 +166,7 @@ model History {
 
 enum SystemSettingsName {
   GIVEAWAY_STEPS
+  COLLECTION_VISIBLE
 }
 
 model VerticalPrice {

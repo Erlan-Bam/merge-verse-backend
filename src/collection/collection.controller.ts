@@ -88,6 +88,10 @@ export class CollectionController {
     description: 'Unauthorized - Invalid or missing JWT token',
   })
   @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Collection is currently not available',
+  })
+  @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
@@ -174,6 +178,10 @@ export class CollectionController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Collection is currently not available',
   })
   @ApiResponse({
     status: 500,

@@ -4,6 +4,7 @@ import {
   Item,
   Level,
   Rarity,
+  SystemSettingsName,
   VerticalPrice,
 } from '@prisma/client';
 import { GiftService } from 'src/gift/gift.service';
@@ -16,12 +17,17 @@ export class CollectionService {
   private vertical: VerticalPrice[] = [];
   private horizontal: HorizontalPrice[] = [];
   private readonly logger = new Logger(CollectionService.name);
+  private isCollectionVisible: boolean = true;
+
   constructor(
     private giftService: GiftService,
     private prisma: PrismaService,
     private referralService: ReferralService,
   ) {
     this.setPrices().catch((error) => {
+      this.logger.error(error);
+    });
+    this.loadCollectionVisibility().catch((error) => {
       this.logger.error(error);
     });
   }
@@ -35,8 +41,34 @@ export class CollectionService {
     }
   }
 
+  private async loadCollectionVisibility(): Promise<void> {
+    try {
+      const settings = await this.prisma.systemSettings.findUnique({
+        where: { name: SystemSettingsName.COLLECTION_VISIBLE },
+      });
+
+      if (settings && settings.value) {
+        this.isCollectionVisible = (settings.value as any).isVisible ?? true;
+      } else {
+        this.isCollectionVisible = true;
+      }
+    } catch (error) {
+      this.logger.error('Failed to load collection visibility: ', error);
+      this.isCollectionVisible = true;
+    }
+  }
+
+  async reloadCollectionVisibility(): Promise<void> {
+    await this.loadCollectionVisibility();
+  }
+
   async getCollection(userId: string) {
     try {
+      // Check if collection is visible
+      if (!this.isCollectionVisible) {
+        throw new HttpException('Collection is currently not available', 403);
+      }
+
       const collection = await this.giftService.getUserGifts(userId);
 
       return { collection: collection };
@@ -51,6 +83,12 @@ export class CollectionService {
     if (this.vertical.length === 0 || this.horizontal.length === 0) {
       await this.setPrices();
     }
+
+    // Check if collection is visible
+    if (!this.isCollectionVisible) {
+      throw new HttpException('Collection is currently not available', 403);
+    }
+
     try {
       const collection = await this.giftService.getUserGifts(userId);
       const gifts = await this.giftService.getAllGifts();

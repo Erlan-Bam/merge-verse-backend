@@ -8,5 +8,6 @@ import { SharedModule } from 'src/shared/shared.module';
   imports: [GiftModule, SharedModule],
   controllers: [CollectionController],
   providers: [CollectionService],
+  exports: [CollectionService],
 })
 export class CollectionModule {}

@@ -8,6 +8,9 @@ import { UpdateGiveawayStepsDto } from './dto/update-giveaway-steps.dto';
 import { GiveawayStatus, SystemSettingsName } from '@prisma/client';
 import { GiveawayService } from 'src/giveaway/giveaway.service';
 import { GiveawaySteps } from 'src/giveaway/types/steps.types';
+import { CollectionService } from 'src/collection/collection.service';
+import { isVisible } from 'src/collection/types/is-visible.types';
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -15,6 +18,7 @@ export class AdminService {
     private prisma: PrismaService,
     private referralService: ReferralService,
     private giveawayService: GiveawayService,
+    private collectionService: CollectionService,
   ) {}
   async getWinnersChoices() {
     try {
@@ -259,6 +263,53 @@ export class AdminService {
       this.logger.error('Failed to update giveaway steps:', error);
       throw new HttpException(
         'Failed to update giveaway steps',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getCollectionVisible() {
+    try {
+      const settings = await this.prisma.systemSettings.findUnique({
+        where: { name: SystemSettingsName.COLLECTION_VISIBLE },
+      });
+
+      if (settings) {
+        return settings.value as isVisible;
+      }
+
+      return { isVisible: true }; // Default value
+    } catch (error) {
+      this.logger.error('Failed to get collection visibility:', error);
+      throw new HttpException(
+        'Failed to get collection visibility',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async toggleCollectionVisible(isVisible: boolean) {
+    try {
+      const updated = await this.prisma.systemSettings.upsert({
+        where: { name: SystemSettingsName.COLLECTION_VISIBLE },
+        update: {
+          value: { isVisible },
+        },
+        create: {
+          name: SystemSettingsName.COLLECTION_VISIBLE,
+          value: { isVisible },
+        },
+      });
+
+      await this.collectionService.reloadCollectionVisibility();
+
+      this.logger.log(`Collection visibility updated to: ${isVisible}`);
+
+      return updated.value as isVisible;
+    } catch (error) {
+      this.logger.error('Failed to update collection visibility:', error);
+      throw new HttpException(
+        'Failed to update collection visibility',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
