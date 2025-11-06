@@ -314,4 +314,128 @@ export class AdminService {
       );
     }
   }
+
+  async archiveUserItems(userId: string) {
+    try {
+      // Verify user exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, telegramId: true },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      let archivedCount = 0;
+      let deletedCount = 0;
+
+      await this.prisma.$transaction(async (tx) => {
+        // Get all items for this specific user
+        const items = await tx.item.findMany({
+          where: { userId },
+        });
+
+        this.logger.log(
+          `Found ${items.length} items to archive for user ${userId}`,
+        );
+
+        if (items.length > 0) {
+          // Copy all items to History table
+          await tx.history.createMany({
+            data: items.map((item) => ({
+              userId: item.userId,
+              giftId: item.giftId,
+              level: item.level,
+              quantity: item.quantity,
+              isTradeable: item.isTradeable,
+              itemCreatedAt: item.createdAt,
+              itemUpdatedAt: item.updatedAt,
+            })),
+          });
+
+          archivedCount = items.length;
+          this.logger.log(
+            `Archived ${archivedCount} items to history for user ${userId}`,
+          );
+
+          // Delete all items for this user
+          const result = await tx.item.deleteMany({
+            where: { userId },
+          });
+
+          deletedCount = result.count;
+          this.logger.log(
+            `Deleted ${deletedCount} items from inventory for user ${userId}`,
+          );
+        }
+      });
+
+      return {
+        success: true,
+        userId,
+        telegramId: user.telegramId,
+        archivedCount,
+        deletedCount,
+        message: `Successfully archived ${archivedCount} items for user ${user.telegramId}`,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to archive user items:', error);
+      throw new HttpException(
+        'Failed to archive user items',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async archiveAllUsersItems() {
+    try {
+      let archivedCount = 0;
+      let deletedCount = 0;
+
+      await this.prisma.$transaction(async (tx) => {
+        // Get all items from the Item table
+        const items = await tx.item.findMany();
+
+        this.logger.log(`Found ${items.length} items to archive`);
+
+        if (items.length > 0) {
+          // Copy all items to History table
+          await tx.history.createMany({
+            data: items.map((item) => ({
+              userId: item.userId,
+              giftId: item.giftId,
+              level: item.level,
+              quantity: item.quantity,
+              isTradeable: item.isTradeable,
+              itemCreatedAt: item.createdAt,
+              itemUpdatedAt: item.updatedAt,
+            })),
+          });
+
+          archivedCount = items.length;
+          this.logger.log(`Archived ${archivedCount} items to history`);
+
+          // Delete all items from the Item table
+          const result = await tx.item.deleteMany();
+          deletedCount = result.count;
+          this.logger.log(`Deleted ${deletedCount} items from inventory`);
+        }
+      });
+
+      return {
+        success: true,
+        archivedCount,
+        deletedCount,
+        message: `Successfully archived all items from ${archivedCount} users`,
+      };
+    } catch (error) {
+      this.logger.error('Failed to archive all users items:', error);
+      throw new HttpException(
+        'Failed to archive all users items',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

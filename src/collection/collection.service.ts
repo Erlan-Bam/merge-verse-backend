@@ -11,6 +11,7 @@ import { GiftService } from 'src/gift/gift.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { CraftCardDto } from './dto/craft-card.dto';
 import { ReferralService } from 'src/shared/services/referral.service';
+import { isVisible } from './types/is-visible.types';
 
 @Injectable()
 export class CollectionService {
@@ -48,7 +49,8 @@ export class CollectionService {
       });
 
       if (settings && settings.value) {
-        this.isCollectionVisible = (settings.value as any).isVisible ?? true;
+        const value = settings.value as isVisible;
+        this.isCollectionVisible = value.isVisible ?? true;
       } else {
         this.isCollectionVisible = true;
       }
@@ -64,7 +66,6 @@ export class CollectionService {
 
   async getCollection(userId: string) {
     try {
-      // Check if collection is visible
       if (!this.isCollectionVisible) {
         throw new HttpException('Collection is currently not available', 403);
       }
@@ -84,7 +85,6 @@ export class CollectionService {
       await this.setPrices();
     }
 
-    // Check if collection is visible
     if (!this.isCollectionVisible) {
       throw new HttpException('Collection is currently not available', 403);
     }

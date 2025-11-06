@@ -6,6 +6,7 @@ import {
   Query,
   UseGuards,
   Param,
+  Post,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AdminGuard } from 'src/shared/guards/admin.guard';
@@ -16,6 +17,7 @@ import { UpdateGiveawayDto } from './dto/update-giveaway.dto';
 import { ToggleGiveawayDto } from './dto/toggle-giveaway.dto';
 import { UpdateGiveawayStepsDto } from './dto/update-giveaway-steps.dto';
 import { ToggleCollectionVisibleDto } from './dto/toggle-collection-visible.dto';
+import { ArchiveUserItemsDto } from './dto/archive-items.dto';
 
 @Controller('admin')
 @ApiTags('Admin')
@@ -132,5 +134,83 @@ export class AdminController {
   })
   async toggleCollectionVisible(@Body() data: ToggleCollectionVisibleDto) {
     return this.adminService.toggleCollectionVisible(data.isVisible);
+  }
+
+  @Post('archive-items/user')
+  @ApiOperation({
+    summary: 'Archive items for a specific user',
+    description:
+      'Archives all items for a specific user by copying them to the History table and then deleting them from the Item table. This is useful for monthly resets or user-specific cleanups.',
+  })
+  @ApiBody({ type: ArchiveUserItemsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User items archived successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        userId: {
+          type: 'string',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+        telegramId: { type: 'string', example: '123456789' },
+        archivedCount: { type: 'number', example: 42 },
+        deletedCount: { type: 'number', example: 42 },
+        message: {
+          type: 'string',
+          example: 'Successfully archived 42 items for user 123456789',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async archiveUserItems(@Body() data: ArchiveUserItemsDto) {
+    return this.adminService.archiveUserItems(data.userId);
+  }
+
+  @Post('archive-items/all')
+  @ApiOperation({
+    summary: 'Archive items for all users',
+    description:
+      'Archives all items for all users by copying them to the History table and then deleting them from the Item table. This is typically used for monthly resets. Use with caution as this affects all users.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All items archived successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        archivedCount: { type: 'number', example: 1234 },
+        deletedCount: { type: 'number', example: 1234 },
+        message: {
+          type: 'string',
+          example: 'Successfully archived all items from 1234 users',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async archiveAllUsersItems() {
+    return this.adminService.archiveAllUsersItems();
   }
 }
