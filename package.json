@@ -38,6 +38,7 @@
     "class-validator": "^0.14.2",
     "grammy": "^1.38.3",
     "joi": "^18.0.1",
+    "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prisma": "^6.18.0",

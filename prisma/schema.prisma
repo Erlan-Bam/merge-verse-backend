@@ -94,11 +94,13 @@ model User {
   streak     Int      @default(0)
   isBanned   Boolean  @default(false)
   referredBy String?
+  cryptoWallet String?
 
   activeAt   DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  email            Email?
   referrer         User?    @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
   referrals        User[]   @relation("UserReferrals")
 
@@ -112,6 +114,19 @@ model User {
   payouts          Payout[]
 
   @@index([referredBy])
+}
+
+model Email {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  email     String   @unique
+  isVerified Boolean @default(false)
+  code      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Gift {

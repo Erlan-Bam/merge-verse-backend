@@ -1,8 +1,18 @@
-import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { TelegramAuthDto } from './dto/telegram-auth.dto';
 import { User } from 'src/shared/decorator/user.decorator';
+import { CreateEmailDto } from './dto/create-email.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { UserGuard } from 'src/shared/guards/user.guard';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('user')
 @ApiTags('User')
@@ -75,5 +85,119 @@ export class UserController {
     return this.userService.generateToken(
       'd581bb7e-56b1-4050-bcf2-b6afce518bad',
     );
+  }
+
+  @Post('email')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create and verify email',
+    description:
+      'Associates an email address with the authenticated user account. Each user can only have one email. A verification code will be sent to the provided email address.',
+  })
+  @ApiBody({ type: CreateEmailDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Email created and verification code sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Verification code sent to your email',
+        },
+        email: {
+          type: 'string',
+          example: 'user@example.com',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request - User already has an email or email is already taken',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async createEmail(
+    @User('id') userId: string,
+    @Body() createEmailDto: CreateEmailDto,
+  ) {
+    try {
+      return await this.userService.createEmail(userId, createEmailDto);
+    } catch (error) {
+      this.logger.error('Failed to create email: ', error);
+      throw error;
+    }
+  }
+
+  @Post('email/verify')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Verify email with code',
+    description:
+      "Verifies the user's email address using the 6-digit verification code sent to their email. Once verified, the code is removed and the email is marked as verified.",
+  })
+  @ApiBody({ type: VerifyEmailDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Email verified successfully',
+        },
+        email: {
+          type: 'string',
+          example: 'user@example.com',
+        },
+        isVerified: {
+          type: 'boolean',
+          example: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request - Invalid code, already verified, or no code found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - No email found for this user',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async verifyEmail(
+    @User('id') userId: string,
+    @Body() verifyEmailDto: VerifyEmailDto,
+  ) {
+    try {
+      return await this.userService.verifyEmail(userId, verifyEmailDto);
+    } catch (error) {
+      this.logger.error('Failed to verify email: ', error);
+      throw error;
+    }
   }
 }

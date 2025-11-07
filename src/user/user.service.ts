@@ -4,6 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { TelegramAuthDto } from './dto/telegram-auth.dto';
 import { validateTelegramWebAppData } from './utils/telegram.utils';
+import { CreateEmailDto } from './dto/create-email.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { EmailService } from 'src/shared/services/email.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class UserService {
@@ -12,6 +16,7 @@ export class UserService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
   async generateToken(userId: string): Promise<string> {
     try {
@@ -111,6 +116,122 @@ export class UserService {
       this.logger.error('Failed to authenticate with Telegram: ', error);
 
       throw new HttpException('Failed to authenticate', 500);
+    }
+  }
+
+  async createEmail(userId: string, createEmailDto: CreateEmailDto) {
+    try {
+      // Check if user exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { email: true },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', 404);
+      }
+
+      // Check if user already has an email
+      if (user.email) {
+        throw new HttpException(
+          'User already has an email associated with their account',
+          400,
+        );
+      }
+
+      // Check if email is already taken by another user
+      const existingEmail = await this.prisma.email.findUnique({
+        where: { email: createEmailDto.email },
+      });
+
+      if (existingEmail) {
+        throw new HttpException(
+          'This email is already associated with another account',
+          400,
+        );
+      }
+
+      // Generate a 6-digit verification code
+      const verificationCode = crypto.randomInt(100000, 999999).toString();
+
+      // Create email record with verification code
+      const email = await this.prisma.email.create({
+        data: {
+          userId,
+          email: createEmailDto.email,
+          code: verificationCode,
+          isVerified: false,
+        },
+      });
+
+      // Send verification email
+      await this.emailService.sendVerificationEmail(
+        createEmailDto.email,
+        verificationCode,
+      );
+
+      return {
+        message: 'Verification code sent to your email',
+        email: email.email,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Failed to create email: ', error);
+      throw new HttpException('Failed to create email', 500);
+    }
+  }
+
+  async verifyEmail(userId: string, verifyEmailDto: VerifyEmailDto) {
+    try {
+      // Find the user's email record
+      const emailRecord = await this.prisma.email.findUnique({
+        where: { userId },
+      });
+
+      if (!emailRecord) {
+        throw new HttpException('No email found for this user', 404);
+      }
+
+      // Check if email is already verified
+      if (emailRecord.isVerified) {
+        throw new HttpException('Email is already verified', 400);
+      }
+
+      // Check if verification code exists
+      if (!emailRecord.code) {
+        throw new HttpException(
+          'No verification code found. Please request a new code',
+          400,
+        );
+      }
+
+      // Verify the code matches
+      if (emailRecord.code !== verifyEmailDto.code) {
+        throw new HttpException('Invalid verification code', 400);
+      }
+
+      // Update email record - mark as verified and remove the code
+      const verifiedEmail = await this.prisma.email.update({
+        where: { userId },
+        data: {
+          isVerified: true,
+          code: null, // Remove the code after successful verification
+        },
+      });
+
+      return {
+        message: 'Email verified successfully',
+        email: verifiedEmail.email,
+        isVerified: true,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Failed to verify email: ', error);
+      throw new HttpException('Failed to verify email', 500);
     }
   }
 }

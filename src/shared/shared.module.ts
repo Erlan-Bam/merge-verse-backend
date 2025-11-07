@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { GiveawayModule } from 'src/giveaway/giveaway.module';
 import { AuctionModule } from 'src/auction/auction.module';
 import { ReferralService } from './services/referral.service';
+import { EmailService } from './services/email.service';
 
 @Global()
 @Module({
@@ -28,6 +29,7 @@ import { ReferralService } from './services/referral.service';
     CronService,
     JwtStrategy,
     ReferralService,
+    EmailService,
   ],
   exports: [
     PrismaService,
@@ -36,6 +38,7 @@ import { ReferralService } from './services/referral.service';
     JwtStrategy,
     JwtModule,
     ReferralService,
+    EmailService,
   ],
 })
 export class SharedModule {}
