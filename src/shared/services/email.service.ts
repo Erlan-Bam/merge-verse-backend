@@ -8,11 +8,8 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(private configService: ConfigService) {
-    const EMAIL_USER = this.configService.get<string>('EMAIL_USER');
-    const EMAIL_PASS = this.configService.get<string>('EMAIL_PASS');
-    if (!EMAIL_USER || !EMAIL_PASS) {
-      throw new Error('EMAIL OR PASSWORD IS NOT SET IN EMAIL SERVICE');
-    }
+    const EMAIL_USER = this.configService.getOrThrow<string>('EMAIL_USER');
+    const EMAIL_PASS = this.configService.getOrThrow<string>('EMAIL_PASS');
 
     this.transporter = nodemailer.createTransport({
       pool: true,
