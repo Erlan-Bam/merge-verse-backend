@@ -9,6 +9,7 @@ import {
   NowpaymentPayoutNotificationDto,
 } from './dto/nowpayment.dto';
 import { CreatePayoutDto } from './dto/create-payout.dto';
+import { InitiatePayoutDto } from './dto/initiate-payout.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -24,7 +25,17 @@ export class PaymentController {
     return await this.paymentService.createInvoice(userId, data);
   }
 
-  @Post('payout')
+  @Post('payout/initiate')
+  @ApiBearerAuth('JWT')
+  @UseGuards(AuthGuard('jwt'))
+  async initiatePayout(
+    @User('id') userId: string,
+    @Body() data: InitiatePayoutDto,
+  ) {
+    return await this.paymentService.initiatePayout(userId, data);
+  }
+
+  @Post('payout/create')
   @ApiBearerAuth('JWT')
   @UseGuards(AuthGuard('jwt'))
   async createPayout(

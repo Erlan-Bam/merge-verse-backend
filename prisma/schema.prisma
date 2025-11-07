@@ -58,6 +58,7 @@ enum PaymentStatus {
 }
 
 enum PayoutStatus {
+  PENDING
   COMPLETED
   PROCESSING
   FAILED
@@ -351,7 +352,7 @@ model Payout {
   id         String   @id @default(uuid())
   userId     String
   amount     Decimal
-  status     PayoutStatus @default(PROCESSING)
+  status     PayoutStatus @default(PENDING)
   externalId String?  @unique
 
   createdAt  DateTime @default(now())

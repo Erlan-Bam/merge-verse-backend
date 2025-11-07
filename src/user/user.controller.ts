@@ -208,7 +208,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Create or update crypto wallet',
     description:
-      'Creates or updates the cryptocurrency wallet address for the authenticated user. This endpoint works as an upsert - it will create a new wallet address if one doesn\'t exist, or update the existing one.',
+      "Creates or updates the cryptocurrency wallet address for the authenticated user. This endpoint works as an upsert - it will create a new wallet address if one doesn't exist, or update the existing one.",
   })
   @ApiBody({ type: UpdateCryptoWalletDto })
   @ApiResponse({

@@ -10,6 +10,9 @@ import {
 } from './dto/nowpayment.dto';
 import { ReferralService } from 'src/shared/services/referral.service';
 import { CreatePayoutDto } from './dto/create-payout.dto';
+import { InitiatePayoutDto } from './dto/initiate-payout.dto';
+import { EmailService } from 'src/shared/services/email.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PaymentService {
@@ -17,11 +20,13 @@ export class PaymentService {
   private readonly CANCEL_URL: string;
   private readonly CALLBACK_URL: string;
   private readonly logger = new Logger(PaymentService.name);
+
   constructor(
     private prisma: PrismaService,
     private nowpaymentService: NowpaymentService,
     private configService: ConfigService,
     private referralService: ReferralService,
+    private emailService: EmailService,
   ) {
     this.SUCCESS_URL = this.configService.get<string>('PAYMENT_SUCCESS_URL');
     this.CANCEL_URL = this.configService.get<string>('PAYMENT_CANCEL_URL');
@@ -58,19 +63,160 @@ export class PaymentService {
     }
   }
 
-  async createPayout(userId: string, data: CreatePayoutDto) {
+  async initiatePayout(userId: string, data: InitiatePayoutDto) {
     try {
-      const isValid = await this.nowpaymentService.validate(data.address);
-      if (!isValid) {
-        throw new HttpException('Invalid payout address', 400);
+      // Get user with email
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { email: true },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', 404);
       }
 
+      if (!user.email) {
+        throw new HttpException(
+          'Email not found. Please add and verify your email first',
+          400,
+        );
+      }
+
+      if (!user.email.isVerified) {
+        throw new HttpException(
+          'Email not verified. Please verify your email first',
+          400,
+        );
+      }
+
+      if (!user.cryptoWallet) {
+        throw new HttpException(
+          'Crypto wallet not found. Please add your crypto wallet address first',
+          400,
+        );
+      }
+
+      // Validate the crypto wallet address
+      const isValid = await this.nowpaymentService.validate(user.cryptoWallet);
+      if (!isValid) {
+        throw new HttpException(
+          'Invalid crypto wallet address in your profile',
+          400,
+        );
+      }
+
+      // Check if user has sufficient balance (including fees)
       const fee = await this.nowpaymentService.getPayoutFee(
         data.amount,
         'usdt',
       );
-
       const totalAmount = data.amount / 0.94 + fee;
+
+      if (user.balance.toNumber() < totalAmount) {
+        throw new HttpException('Insufficient balance', 400);
+      }
+
+      // Generate 6-digit code
+      const code = crypto.randomInt(100000, 999999).toString();
+
+      // Create a pending payout record and update email with code
+      await this.prisma.$transaction(async (tx) => {
+        await tx.payout.create({
+          data: {
+            userId: userId,
+            amount: data.amount,
+            status: PayoutStatus.PENDING,
+          },
+        });
+
+        await tx.email.update({
+          where: { userId: userId },
+          data: { code },
+        });
+      });
+
+      // Send payout code via email
+      await this.emailService.sendPayoutCodeEmail(
+        user.email.email,
+        code,
+        data.amount,
+      );
+
+      this.logger.log(
+        `Payout initiated for user ${userId}, amount: ${data.amount}`,
+      );
+
+      return {
+        status: 'ok',
+        message: 'Payout code sent to your email',
+        email: user.email.email,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to initiate payout:', error);
+      throw new HttpException('Failed to initiate payout', 500);
+    }
+  }
+
+  async createPayout(userId: string, data: CreatePayoutDto) {
+    try {
+      // Get user with email
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { email: true },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', 404);
+      }
+
+      if (!user.email) {
+        throw new HttpException('Email not found', 400);
+      }
+
+      if (!user.email.isVerified) {
+        throw new HttpException('Email not verified', 400);
+      }
+
+      if (!user.email.code) {
+        throw new HttpException(
+          'No payout code found. Please initiate payout first',
+          400,
+        );
+      }
+
+      if (!user.cryptoWallet) {
+        throw new HttpException('Crypto wallet not found', 400);
+      }
+
+      // Verify the code
+      if (user.email.code !== data.code) {
+        throw new HttpException('Invalid payout code', 400);
+      }
+
+      // Find the most recent pending payout for this user
+      const pendingPayout = await this.prisma.payout.findFirst({
+        where: {
+          userId: userId,
+          status: PayoutStatus.PENDING,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!pendingPayout) {
+        throw new HttpException(
+          'No pending payout found. Please initiate payout first',
+          400,
+        );
+      }
+
+      const amount = pendingPayout.amount.toNumber();
+
+      // Recalculate fees and total amount
+      const fee = await this.nowpaymentService.getPayoutFee(amount, 'usdt');
+      const totalAmount = amount / 0.94 + fee;
 
       await this.prisma.$transaction(async (tx) => {
         const decrement = await tx.user.updateMany({
@@ -90,20 +236,25 @@ export class PaymentService {
           );
         }
 
-        const payout = await tx.payout.create({
-          data: {
-            userId: userId,
-            amount: data.amount,
-            status: PayoutStatus.PROCESSING,
-          },
+        // Update payout status to PROCESSING
+        await tx.payout.update({
+          where: { id: pendingPayout.id },
+          data: { status: PayoutStatus.PROCESSING },
         });
 
+        // Send payout to payment provider
         await this.nowpaymentService.createPayout({
-          address: data.address,
+          address: user.cryptoWallet,
           amount: totalAmount,
           currency: 'usdt',
-          unique_external_id: payout.id,
+          unique_external_id: pendingPayout.id,
           ipn_callback_url: `${this.CALLBACK_URL}/nowpayment/payout/notification`,
+        });
+
+        // Clear the code after successful payout creation
+        await tx.email.update({
+          where: { userId: userId },
+          data: { code: null },
         });
       });
 
