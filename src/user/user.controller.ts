@@ -11,6 +11,7 @@ import { TelegramAuthDto } from './dto/telegram-auth.dto';
 import { User } from 'src/shared/decorator/user.decorator';
 import { CreateEmailDto } from './dto/create-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { UpdateCryptoWalletDto } from './dto/update-crypto-wallet.dto';
 import { UserGuard } from 'src/shared/guards/user.guard';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -197,6 +198,59 @@ export class UserController {
       return await this.userService.verifyEmail(userId, verifyEmailDto);
     } catch (error) {
       this.logger.error('Failed to verify email: ', error);
+      throw error;
+    }
+  }
+
+  @Post('crypto-wallet')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create or update crypto wallet',
+    description:
+      'Creates or updates the cryptocurrency wallet address for the authenticated user. This endpoint works as an upsert - it will create a new wallet address if one doesn\'t exist, or update the existing one.',
+  })
+  @ApiBody({ type: UpdateCryptoWalletDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Crypto wallet created/updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Crypto wallet updated successfully',
+        },
+        cryptoWallet: {
+          type: 'string',
+          example: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid wallet address format',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async upsertCryptoWallet(
+    @User('id') userId: string,
+    @Body() updateCryptoWalletDto: UpdateCryptoWalletDto,
+  ) {
+    try {
+      return await this.userService.upsertCryptoWallet(
+        userId,
+        updateCryptoWalletDto,
+      );
+    } catch (error) {
+      this.logger.error('Failed to update crypto wallet: ', error);
       throw error;
     }
   }

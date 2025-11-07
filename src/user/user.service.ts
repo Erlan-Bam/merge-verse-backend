@@ -6,6 +6,7 @@ import { TelegramAuthDto } from './dto/telegram-auth.dto';
 import { validateTelegramWebAppData } from './utils/telegram.utils';
 import { CreateEmailDto } from './dto/create-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { UpdateCryptoWalletDto } from './dto/update-crypto-wallet.dto';
 import { EmailService } from 'src/shared/services/email.service';
 import * as crypto from 'crypto';
 
@@ -57,6 +58,13 @@ export class UserService {
           role: true,
           isBanned: true,
           balance: true,
+          cryptoWallet: true,
+          email: {
+            select: {
+              email: true,
+              isVerified: true,
+            },
+          },
         },
       });
 
@@ -232,6 +240,36 @@ export class UserService {
       }
       this.logger.error('Failed to verify email: ', error);
       throw new HttpException('Failed to verify email', 500);
+    }
+  }
+
+  async upsertCryptoWallet(
+    userId: string,
+    updateCryptoWalletDto: UpdateCryptoWalletDto,
+  ) {
+    try {
+      // Upsert the crypto wallet - creates or updates
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          cryptoWallet: updateCryptoWalletDto.cryptoWallet,
+        },
+        select: {
+          id: true,
+          cryptoWallet: true,
+        },
+      });
+
+      return {
+        message: 'Crypto wallet updated successfully',
+        cryptoWallet: updatedUser.cryptoWallet,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Failed to update crypto wallet: ', error);
+      throw new HttpException('Failed to update crypto wallet', 500);
     }
   }
 }
