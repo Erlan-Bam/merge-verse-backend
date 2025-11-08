@@ -33,18 +33,20 @@ export class PackService {
         }
       }
 
-      const isStreak = user.streak + 1 >= 7;
+      const newStreak = user.streak + 1;
+      const isComplete = newStreak >= 7;
       const { pack, config } = await this.getPackByType(
-        isStreak ? 'FREE_DAILY' : 'FREE_STREAK',
+        isComplete ? 'FREE_DAILY' : 'FREE_STREAK',
       );
 
-      await this.prisma.$transaction(async (tx) => {
-        await tx.user.update({
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.user.update({
           where: { id: userId },
           data: {
             activeAt: new Date(),
-            streak: isStreak ? 0 : user.streak + 1,
+            streak: isComplete ? 0 : newStreak,
           },
+          select: { streak: true },
         });
 
         await Promise.all(
@@ -71,9 +73,14 @@ export class PackService {
             }),
           ),
         );
+
+        return updated;
       });
 
-      return { pack: pack, streak: isStreak ? 7 : user.streak + 1 };
+      return {
+        pack: pack,
+        streak: updated.streak,
+      };
     } catch (error) {
       this.logger.log(
         `Error in getting free pack for user ${userId}: ${error.message}`,
