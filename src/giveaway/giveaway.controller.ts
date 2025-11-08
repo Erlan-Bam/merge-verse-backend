@@ -25,6 +25,7 @@ import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
 import { CreateGiveawayDto } from './dto/create-giveaway.dto';
 import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
+import { GetHallOfFameDto } from './dto/get-hall-of-fame.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('giveaway')
@@ -174,6 +175,74 @@ export class GiveawayController {
   })
   async getWinners(@Query() query: GetGiveawaysWinnerDto) {
     return this.giveawayService.getTopWinners(query);
+  }
+
+  @Get('hall-of-fame')
+  @ApiOperation({
+    summary: 'Get hall of fame',
+    description:
+      'Retrieves winners from the latest finished giveaways, showing their username, photo, and the gift they won with its details (name, rarity, url).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of latest giveaways to fetch winners from (default: 10)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hall of fame retrieved successfully',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          username: {
+            type: 'string',
+            description: 'Winner username',
+            example: 'john_doe',
+          },
+          photo: {
+            type: 'string',
+            description: 'Winner photo URL',
+            example: 'https://example.com/photo.jpg',
+          },
+          gift: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Gift name',
+                example: 'Golden Trophy',
+              },
+              rarity: {
+                type: 'string',
+                enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                description: 'Gift rarity',
+                example: 'LEGENDARY',
+              },
+              url: {
+                type: 'string',
+                description: 'Gift image URL',
+                example: 'https://example.com/gift.jpg',
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async getHallOfFame(@Query() query: GetHallOfFameDto) {
+    return this.giveawayService.getHallOfFame(query);
   }
 
   @Get(':id')

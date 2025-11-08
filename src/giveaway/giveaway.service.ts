@@ -21,6 +21,7 @@ import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GiftService } from 'src/gift/gift.service';
 import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
 import { GiveawaySteps } from './types/steps.types';
+import { GetHallOfFameDto } from './dto/get-hall-of-fame.dto';
 
 @Injectable()
 export class GiveawayService implements OnModuleInit {
@@ -363,6 +364,78 @@ export class GiveawayService implements OnModuleInit {
       this.logger.error('Failed to fetch winners:', error);
       throw new HttpException(
         'Failed to fetch winners',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getHallOfFame(query: GetHallOfFameDto) {
+    try {
+      const limit = query.limit || 20;
+      const latest = await this.prisma.giveaway.findMany({
+        where: {
+          status: GiveawayStatus.FINISHED,
+        },
+        orderBy: {
+          endsAt: 'desc',
+        },
+        take: limit,
+        select: {
+          id: true,
+        },
+      });
+
+      if (latest.length === 0) {
+        return [];
+      }
+
+      const giveawayIds = latest.map((g) => g.id);
+
+      const winners = await this.prisma.winner.findMany({
+        where: {
+          giveawayId: {
+            in: giveawayIds,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              username: true,
+              photo: true,
+            },
+          },
+          giveaway: {
+            include: {
+              gift: {
+                select: {
+                  name: true,
+                  rarity: true,
+                  url: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      const result = winners.map((winner) => ({
+        username: winner.user.username,
+        photo: winner.user.photo,
+        gift: {
+          name: winner.giveaway.gift.name,
+          rarity: winner.giveaway.gift.rarity,
+          url: winner.giveaway.gift.url,
+        },
+      }));
+
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to fetch hall of fame:', error);
+      throw new HttpException(
+        'Failed to fetch hall of fame',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
