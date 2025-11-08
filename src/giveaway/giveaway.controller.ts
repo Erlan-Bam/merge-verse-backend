@@ -25,11 +25,12 @@ import { EnterGiveawayDto } from './dto/enter-giveaway.dto';
 import { GetGiveawaysDto } from './dto/get-giveaways.dto';
 import { CreateGiveawayDto } from './dto/create-giveaway.dto';
 import { GetGiveawaysWinnerDto } from './dto/get-giveaways-winner.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('giveaway')
 @ApiTags('Giveaway')
 @ApiBearerAuth('JWT')
-@UseGuards(UserGuard)
+@UseGuards(AuthGuard('jwt'))
 export class GiveawayController {
   constructor(private readonly giveawayService: GiveawayService) {}
 
