@@ -3,6 +3,13 @@ import { SharedModule } from './shared/shared.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UserModule } from './user/user.module';
+import { AdminModule } from './admin/admin.module';
+import { AuctionModule } from './auction/auction.module';
+import { CollectionModule } from './collection/collection.module';
+import { GiftModule } from './gift/gift.module';
+import { GiveawayModule } from './giveaway/giveaway.module';
+import { PackModule } from './pack/pack.module';
+import { PaymentModule } from './payment/payment.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -26,6 +33,13 @@ import * as Joi from 'joi';
     ScheduleModule.forRoot(),
     SharedModule,
     UserModule,
+    AdminModule,
+    AuctionModule,
+    CollectionModule,
+    GiftModule,
+    GiveawayModule,
+    PackModule,
+    PaymentModule,
   ],
 })
 export class AppModule {}
