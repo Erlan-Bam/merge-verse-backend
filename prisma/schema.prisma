@@ -127,8 +127,6 @@ model Email {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
 }
@@ -165,8 +163,6 @@ model Item {
   @@unique([userId, giftId, level, isTradeable])
   @@index([userId])
   @@index([giftId])
-
-
 }
 
 model History {
@@ -179,12 +175,10 @@ model History {
   itemCreatedAt DateTime
   itemUpdatedAt DateTime
 
-
   createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([giftId])
-
 }
 
 enum SystemSettingsName {
@@ -211,20 +205,11 @@ model Auction {
   current    Decimal
   endsAt     DateTime
 
-
-
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-
-
-
-
-
-
-
 
   bids       Bid[]
   @@index([userId])
@@ -249,40 +234,11 @@ model Bid {
   userId     String
   amount     Decimal
 
-
-
-
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-
-
-
-
-
   auction    Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   @@unique([auctionId, userId])
   @@index([auctionId])
@@ -298,26 +254,7 @@ model HorizontalPrice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
   @@unique([name, rarity])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 enum GiveawayStatus {
@@ -423,13 +360,7 @@ model Payout {
   updatedAt  DateTime @updatedAt
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-
-
-
-
   @@index([userId])
-
 
 }
 
