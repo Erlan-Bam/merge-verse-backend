@@ -27,6 +27,7 @@ export class PackService {
 
         if (startOfActiveAt === startOfToday) {
           return {
+            isClaimed: true,
             streak: user.streak,
             pack: [],
           };
@@ -78,6 +79,7 @@ export class PackService {
       });
 
       return {
+        isClaimed: false,
         pack: pack,
         streak: updated.streak,
       };
