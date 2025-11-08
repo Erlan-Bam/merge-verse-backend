@@ -18,6 +18,7 @@ export class GiftService {
   }
 
   private async setGifts(): Promise<void> {
+    await this.prisma.ensureConnected();
     try {
       this.gifts = await this.prisma.gift.findMany();
     } catch (error) {
@@ -26,6 +27,7 @@ export class GiftService {
   }
 
   private async setPrices(): Promise<void> {
+    await this.prisma.ensureConnected();
     try {
       this.prices = await this.prisma.price.findMany();
     } catch (error) {
