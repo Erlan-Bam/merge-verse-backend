@@ -13,7 +13,7 @@ export class PrismaService
 {
   private isConnected = false;
   private readonly logger = new Logger(PrismaService.name);
-  
+
   async onModuleInit() {
     await this.$connect();
     this.isConnected = true;
@@ -25,10 +25,12 @@ export class PrismaService
     }
 
     let lastError: Error | null = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        this.logger.log(`Attempting to connect to database (attempt ${attempt}/${maxRetries})...`);
+        this.logger.log(
+          `Attempting to connect to database (attempt ${attempt}/${maxRetries})...`,
+        );
         await this.$connect();
         this.isConnected = true;
         this.logger.log('Successfully connected to database');
@@ -36,22 +38,22 @@ export class PrismaService
       } catch (error) {
         lastError = error as Error;
         this.logger.warn(
-          `Failed to connect to database (attempt ${attempt}/${maxRetries}): ${lastError.message}`
+          `Failed to connect to database (attempt ${attempt}/${maxRetries}): ${lastError.message}`,
         );
-        
+
         if (attempt < maxRetries) {
           const delay = delayMs * attempt; // Exponential backoff
           this.logger.log(`Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
     this.logger.error(
-      `Failed to connect to database after ${maxRetries} attempts`
+      `Failed to connect to database after ${maxRetries} attempts`,
     );
     throw new Error(
-      `Database connection failed after ${maxRetries} retries: ${lastError?.message || 'Unknown error'}`
+      `Database connection failed after ${maxRetries} retries: ${lastError?.message || 'Unknown error'}`,
     );
   }
 
