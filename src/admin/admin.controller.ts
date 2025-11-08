@@ -29,26 +29,125 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('giveaway/winners')
+  @ApiOperation({
+    summary: 'Get giveaway winners choices',
+    description:
+      'Retrieves the configuration for how giveaway winners are selected and displayed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Winners choices retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async getWinnersChoices() {
     return this.adminService.getWinnersChoices();
   }
 
   @Get('referral-settings')
+  @ApiOperation({
+    summary: 'Get referral system settings',
+    description:
+      'Retrieves current referral system configuration including rewards, bonuses, and requirements.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Referral settings retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async getReferralSettings() {
     return this.adminService.getReferralSettings();
   }
 
   @Patch('referral-settings')
+  @ApiOperation({
+    summary: 'Update referral system settings',
+    description:
+      'Updates the referral system configuration including reward amounts, bonus thresholds, and referral requirements.',
+  })
+  @ApiBody({ type: UpdateReferralSettingsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Referral settings updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid settings data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async updateReferralSettings(@Body() data: UpdateReferralSettingsDto) {
     return this.adminService.updateReferralSettings(data);
   }
 
   @Get('giveaways')
+  @ApiOperation({
+    summary: 'Get all giveaways (Admin)',
+    description:
+      'Retrieves all giveaways with full details including internal statistics. Admin-only endpoint with complete visibility.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All giveaways retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async getAllGiveaways() {
     return this.adminService.getAllGiveaways();
   }
 
   @Patch('giveaway/:id')
+  @ApiOperation({
+    summary: 'Update giveaway',
+    description:
+      'Updates giveaway details such as title, description, dates, prize information, and entry requirements.',
+  })
+  @ApiBody({ type: UpdateGiveawayDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Giveaway updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid giveaway data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Giveaway not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async updateGiveaway(
     @Param('id') id: string,
     @Body() data: UpdateGiveawayDto,
@@ -57,6 +156,32 @@ export class AdminController {
   }
 
   @Patch('giveaway/:id/toggle')
+  @ApiOperation({
+    summary: 'Toggle giveaway active status',
+    description:
+      'Activates or deactivates a giveaway. Inactive giveaways are not visible to users and cannot accept new entries.',
+  })
+  @ApiBody({ type: ToggleGiveawayDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Giveaway status toggled successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid status',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Giveaway not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async toggleGiveaway(
     @Param('id') id: string,
     @Body() data: ToggleGiveawayDto,
@@ -65,11 +190,50 @@ export class AdminController {
   }
 
   @Get('giveaway-steps')
+  @ApiOperation({
+    summary: 'Get giveaway steps configuration',
+    description:
+      'Retrieves the available steps/tasks that users can complete to earn giveaway entries (e.g., follow social media, share, invite friends).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Giveaway steps retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async getGiveawaySteps() {
     return this.adminService.getGiveawaySteps();
   }
 
   @Patch('giveaway-steps')
+  @ApiOperation({
+    summary: 'Update giveaway steps configuration',
+    description:
+      'Updates the available steps/tasks and their entry values that users can complete to earn giveaway entries.',
+  })
+  @ApiBody({ type: UpdateGiveawayStepsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Giveaway steps updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid steps configuration',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async updateGiveawaySteps(@Body() data: UpdateGiveawayStepsDto) {
     return this.adminService.updateGiveawaySteps(data);
   }

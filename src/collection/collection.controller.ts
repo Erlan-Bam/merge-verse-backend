@@ -362,6 +362,52 @@ export class CollectionController {
   }
 
   @Post('full-prize')
+  @ApiOperation({
+    summary: 'Claim full collection prize',
+    description:
+      "Claim the ultimate reward for completing the entire collection (all gifts at all levels). This is the highest achievement prize. The reward amount is added to the user's balance and the entire collection will be cleared.",
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Full collection prize claimed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the prize was claimed successfully',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Success message',
+          example: 'Full collection prize claimed!',
+        },
+        prizeAmount: {
+          type: 'number',
+          description: 'The amount of the ultimate prize awarded',
+          example: 50000,
+        },
+        newBalance: {
+          type: 'number',
+          description: "The user's new balance after claiming the prize",
+          example: 100000,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Collection is not fully complete',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async fullPrize(@User('id') userId: string) {
     return this.collectionService.getFullPrize(userId);
   }

@@ -21,6 +21,7 @@ export class ReferralService {
    * Load referral settings from database and cache them
    */
   async loadSettings(): Promise<void> {
+    await this.prisma.ensureConnected();
     try {
       const settings = await this.prisma.referralSettings.findMany();
 

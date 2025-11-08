@@ -13,7 +13,7 @@ export class EmailService {
 
     this.transporter = nodemailer.createTransport({
       pool: true,
-      host: 'pkz66.hoster.kz',
+      host: 'smtp.gmail.com',
       port: 465,
       secure: true,
       auth: {
