@@ -59,6 +59,7 @@ export class UserController {
   }
 
   @Get('profile')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
   async getProfile(@User('id') userId: string) {
     return this.userService.getProfile(userId);
   }
