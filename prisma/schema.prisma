@@ -1,21 +1,290 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-enum Role {
-  USER
-  ADMIN
+model Auction {
+  id        String        @id
+  userId    String
+  giftId    String
+  level     Level
+  start     Decimal
+  current   Decimal
+  endsAt    DateTime
+  createdAt DateTime      @default(now())
+  updatedAt DateTime
+  status    AuctionStatus @default(ACTIVE)
+  Gift      Gift          @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  User      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Bid       Bid[]
+
+  @@index([giftId])
+  @@index([userId])
+}
+
+model Bid {
+  id        String   @id
+  auctionId String
+  userId    String
+  amount    Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, userId])
+  @@index([auctionId])
+  @@index([userId])
+}
+
+model Compensation {
+  id        String   @id
+  userId    String
+  type      PackType
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  amount    Int      @default(1)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Email {
+  id         String   @id
+  userId     String   @unique
+  email      String   @unique
+  isVerified Boolean  @default(false)
+  code       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Entry {
+  id          String   @id
+  giveawayId  String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  isTradeable Boolean
+  giftId      String
+  Gift        Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  Giveaway    Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([giveawayId])
+  @@index([userId])
+}
+
+model Gift {
+  id        String     @id
+  name      String     @unique
+  rarity    Rarity
+  url       String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime
+  Auction   Auction[]
+  Entry     Entry[]
+  Giveaway  Giveaway[]
+  Item      Item[]
+}
+
+model Giveaway {
+  id        String         @id
+  giftId    String
+  status    GiveawayStatus @default(PENDING)
+  startAt   DateTime
+  endsAt    DateTime
+  createdAt DateTime       @default(now())
+  updatedAt DateTime
+  Entry     Entry[]
+  Gift      Gift           @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  Winner    Winner[]
+
+  @@index([endsAt])
+  @@index([giftId])
+  @@index([startAt])
+  @@index([status])
+}
+
+model History {
+  id            String   @id
+  userId        String
+  giftId        String
+  level         Level
+  quantity      Int
+  isTradeable   Boolean
+  itemCreatedAt DateTime
+  itemUpdatedAt DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([giftId])
+  @@index([userId])
+}
+
+model HorizontalPrice {
+  id        String   @id
+  name      String
+  rarity    Rarity
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([name, rarity])
+}
+
+model Item {
+  id          String   @id
+  userId      String
+  giftId      String
+  level       Level
+  quantity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  isTradeable Boolean
+  Gift        Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, giftId, level, isTradeable])
+  @@index([giftId])
+  @@index([userId])
+}
+
+model Payment {
+  id         String        @id
+  userId     String
+  amount     Decimal
+  provider   Provider
+  status     PaymentStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime
+  externalId String?       @unique
+  User       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Payout {
+  id         String       @id
+  userId     String
+  amount     Decimal
+  status     PayoutStatus @default(PENDING)
+  externalId String?      @unique
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime
+  User       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Price {
+  id        String   @id
+  level     Level
+  rarity    Rarity
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([level, rarity])
+}
+
+model ReferralSettings {
+  id        String               @id
+  name      ReferralSettingsName @unique
+  type      ValueType
+  value     Decimal
+  createdAt DateTime             @default(now())
+  updatedAt DateTime
+}
+
+model SystemSettings {
+  id        String             @id
+  name      SystemSettingsName @unique
+  value     Json
+  createdAt DateTime           @default(now())
+  updatedAt DateTime
+}
+
+model User {
+  id           String         @id
+  telegramId   String         @unique
+  role         Role           @default(USER)
+  balance      Decimal        @default(0)
+  streak       Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  isBanned     Boolean        @default(false)
+  activeAt     DateTime?
+  referredBy   String?
+  cryptoWallet String?
+  Auction      Auction[]
+  Bid          Bid[]
+  Compensation Compensation[]
+  Email        Email?
+  Entry        Entry[]
+  Item         Item[]
+  Payment      Payment[]
+  Payout       Payout[]
+  User         User?          @relation("UserToUser", fields: [referredBy], references: [id])
+  other_User   User[]         @relation("UserToUser")
+  Winner       Winner[]
+
+  @@index([referredBy])
+}
+
+model VerticalPrice {
+  id        String   @id
+  level     Level    @unique
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model Winner {
+  id         String       @id
+  giveawayId String
+  userId     String
+  choice     WinnerChoice @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime
+  isFinished Boolean      @default(false)
+  Giveaway   Giveaway     @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  User       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([giveawayId])
+  @@index([userId])
+}
+
+enum AuctionStatus {
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum GiveawayStatus {
+  PENDING
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum Level {
+  L1
+  L2
+  L3
+  L4
+  L5
+  L6
+  L7
+  L8
+  L9
+  L10
+  L0
 }
 
 enum PackType {
@@ -23,6 +292,19 @@ enum PackType {
   RARE_PACK
   EPIC_PACK
   LEGENDARY_PACK
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PayoutStatus {
+  COMPLETED
+  PROCESSING
+  FAILED
+  PENDING
 }
 
 enum Provider {
@@ -37,147 +319,15 @@ enum Rarity {
   MYTHIC
 }
 
-enum Level {
-  L0
-  L1
-  L2
-  L3
-  L4
-  L5
-  L6
-  L7
-  L8
-  L9
-  L10
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-}
-
-enum PayoutStatus {
-  PENDING
-  COMPLETED
-  PROCESSING
-  FAILED
-}
-
-enum AuctionStatus {
-  ACTIVE
-  FINISHED
-  CANCELLED
-}
-
-enum WinnerChoice {
-  COMPENSATION
-  GIFT
-  PENDING
-}
-
-enum ValueType {
-  FIXED
-  PERCENTAGE
-}
-
 enum ReferralSettingsName {
   REFERRAL_FIRST_LEVEL
   REFERRAL_SECOND_LEVEL
   REFERRAL_FULL_COLLECTION
 }
 
-model User {
-  id         String   @id @default(uuid())
-  telegramId String   @unique
-  role       Role     @default(USER)
-  balance    Decimal  @default(0)
-  streak     Int      @default(0)
-  isBanned   Boolean  @default(false)
-  referredBy String?
-  cryptoWallet String?
-
-  activeAt   DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  email            Email?
-  referrer         User?    @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
-  referrals        User[]   @relation("UserReferrals")
-
-  inventory        Item[]
-  auctions         Auction[]
-  bids             Bid[]
-  payments         Payment[]
-  compensations    Compensation[]
-  winnings         Winner[] @relation("GiveawayWinner")
-  entries          Entry[] @relation("GiveawayEntries")
-  payouts          Payout[]
-
-  @@index([referredBy])
-}
-
-model Email {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  email     String   @unique
-  isVerified Boolean @default(false)
-  code      String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Gift {
-  id        String      @id @default(uuid())
-  name      String      @unique
-  rarity    Rarity
-  url       String
-
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-
-  inventory  Item[]
-  auctions   Auction[]
-  giveaways  Giveaway[]
-  entries    Entry[]
-}
-
-model Item {
-  id         String   @id @default(uuid())
-  userId     String
-  giftId     String
-  level      Level
-  quantity   Int
-  isTradeable Boolean
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, giftId, level, isTradeable])
-  @@index([userId])
-  @@index([giftId])
-}
-
-model History {
-  id         String   @id @default(uuid())
-  userId     String
-  giftId     String
-  level      Level
-  quantity   Int
-  isTradeable Boolean
-  itemCreatedAt DateTime
-  itemUpdatedAt DateTime
-
-  createdAt  DateTime @default(now())
-
-  @@index([userId])
-  @@index([giftId])
+enum Role {
+  USER
+  ADMIN
 }
 
 enum SystemSettingsName {
@@ -185,199 +335,13 @@ enum SystemSettingsName {
   COLLECTION_VISIBLE
 }
 
-model VerticalPrice {
-  id        String   @id @default(uuid())
-  level     Level    @unique
-  price     Decimal
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum ValueType {
+  FIXED
+  PERCENTAGE
 }
 
-model Auction {
-  id         String   @id @default(uuid())
-  status     AuctionStatus @default(ACTIVE)
-  userId     String
-  giftId     String
-  level      Level
-  start      Decimal
-  current    Decimal
-  endsAt     DateTime
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-
-  bids       Bid[]
-  @@index([userId])
-  @@index([giftId])
-}
-
-model Price {
-  id        String   @id @default(uuid())
-  level     Level
-  rarity    Rarity
-  price     Decimal
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([level, rarity])
-}
-
-model Bid {
-  id         String   @id @default(uuid())
-  auctionId  String
-  userId     String
-  amount     Decimal
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  auction    Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([auctionId, userId])
-  @@index([auctionId])
-  @@index([userId])
-}
-
-model HorizontalPrice {
-  id        String   @id @default(uuid())
-  name      String
-  rarity    Rarity
-  price     Decimal
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([name, rarity])
-}
-
-enum GiveawayStatus {
+enum WinnerChoice {
+  COMPENSATION
+  GIFT
   PENDING
-  ACTIVE
-  FINISHED
-  CANCELLED
-}
-
-model Giveaway {
-  id         String         @id @default(uuid())
-  giftId     String
-  status     GiveawayStatus @default(PENDING)
-  startAt    DateTime
-  endsAt     DateTime
-
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-
-  gift       Gift           @relation(fields: [giftId], references: [id], onDelete: Cascade)
-  entries    Entry[]
-  winners    Winner[]
-
-  @@index([giftId])
-  @@index([status])
-  @@index([startAt])
-  @@index([endsAt])
-}
-
-model Winner {
-  id          String    @id @default(uuid())
-  giveawayId  String
-  userId      String
-  choice      WinnerChoice @default(PENDING)
-  isFinished  Boolean   @default(false)
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
-  user        User      @relation("GiveawayWinner", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([giveawayId])
-  @@index([userId])
-}
-
-model Compensation {
-  id         String   @id @default(uuid())
-  userId     String
-  type       PackType
-  amount     Int     @default(1)
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Entry {
-  id          String    @id @default(uuid())
-  giveawayId  String
-  userId      String
-  giftId      String
-  isTradeable Boolean 
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
-  user        User      @relation("GiveawayEntries", fields: [userId], references: [id], onDelete: Cascade)
-  gift        Gift      @relation(fields: [giftId], references: [id], onDelete: Cascade)
-
-  @@index([giveawayId])
-  @@index([userId])
-}
-
-model Payment {
-  id         String   @id @default(uuid())
-  userId     String
-  amount     Decimal
-  provider   Provider
-  status     PaymentStatus @default(PENDING)
-  externalId String?  @unique
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model Payout {
-  id         String   @id @default(uuid())
-  userId     String
-  amount     Decimal
-  status     PayoutStatus @default(PENDING)
-  externalId String?  @unique
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model SystemSettings {
-  id        String   @id @default(uuid())
-  name      SystemSettingsName @unique
-  value     Json
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ReferralSettings {
-  id                String   @id @default(uuid())
-  name              ReferralSettingsName @unique
-  type              ValueType
-  value             Decimal
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 }
