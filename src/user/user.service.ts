@@ -129,6 +129,23 @@ export class UserService {
     }
   }
 
+  async getCollectionHistory(userId: string) {
+    try {
+      const history = await this.prisma.history.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return {
+        history: history,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+    }
+  }
+
   async createEmail(userId: string, createEmailDto: CreateEmailDto) {
     try {
       // Check if user exists

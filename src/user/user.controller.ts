@@ -14,12 +14,16 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { UpdateCryptoWalletDto } from './dto/update-crypto-wallet.dto';
 import { UserGuard } from 'src/shared/guards/user.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { CollectionService } from 'src/collection/collection.service';
 
 @Controller('user')
 @ApiTags('User')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private collectionService: CollectionService,
+  ) {}
 
   @Post('telegram')
   @ApiOperation({
@@ -62,6 +66,90 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'), UserGuard)
   async getProfile(@User('id') userId: string) {
     return this.userService.getProfile(userId);
+  }
+
+  @Get('inventory')
+  @ApiOperation({
+    summary: 'Get user collection',
+    description:
+      "Retrieves the authenticated user's complete collection of gifts with their levels and quantities.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Collection retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        collection: {
+          type: 'array',
+          description: 'Array of items in the user collection',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Item ID' },
+              level: {
+                type: 'string',
+                enum: [
+                  'L0',
+                  'L1',
+                  'L2',
+                  'L3',
+                  'L4',
+                  'L5',
+                  'L6',
+                  'L7',
+                  'L8',
+                  'L9',
+                  'L10',
+                ],
+                description: 'Item level',
+              },
+              quantity: {
+                type: 'number',
+                description: 'Number of items at this level',
+              },
+              isTradeable: {
+                type: 'boolean',
+                description: 'Whether the item is tradeable',
+              },
+              gift: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', description: 'Gift ID' },
+                  name: { type: 'string', description: 'Gift name' },
+                  rarity: {
+                    type: 'string',
+                    enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                    description: 'Gift rarity',
+                  },
+                  url: { type: 'string', description: 'Gift image URL' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Collection is currently not available',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async getCollection(@User('id') userId: string) {
+    return this.collectionService.getCollection(userId);
+  }
+
+  @Get('collection/history')
+  async getCollectionHistory(@User('id') userId: string) {
+    return this.userService.getCollectionHistory(userId);
   }
 
   @Post('test')
