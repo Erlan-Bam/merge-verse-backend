@@ -34,6 +34,7 @@ export class CollectionService {
   }
 
   private async setPrices(): Promise<void> {
+    await this.prisma.ensureConnected();
     try {
       this.vertical = await this.prisma.verticalPrice.findMany();
       this.horizontal = await this.prisma.horizontalPrice.findMany();
