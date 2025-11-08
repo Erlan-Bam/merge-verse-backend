@@ -12,18 +12,36 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private isConnected = false;
+  private promise: Promise<void> | null = null;
   private readonly logger = new Logger(PrismaService.name);
 
   async onModuleInit() {
-    await this.$connect();
-    this.isConnected = true;
+    await this.ensureConnected();
   }
 
   async ensureConnected(maxRetries: number = 5, delayMs: number = 1000) {
+    // If already connected, return immediately
     if (this.isConnected) {
       return;
     }
 
+    // If a connection attempt is already in progress, wait for it
+    if (this.promise) {
+      return this.promise;
+    }
+
+    // Start a new connection attempt and store the promise
+    this.promise = this.connectWithRetry(maxRetries, delayMs);
+
+    try {
+      await this.promise;
+    } finally {
+      // Clear the promise once connection attempt is complete (success or failure)
+      this.promise = null;
+    }
+  }
+
+  private async connectWithRetry(maxRetries: number, delayMs: number) {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
