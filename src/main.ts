@@ -15,6 +15,7 @@ async function bootstrap() {
       'https://tma-frontend-production-1702.up.railway.app',
       'https://miniapp.arcticpay.app',
       'http://localhost:3000',
+      'https://mergeverse-production.up.railway.app'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
