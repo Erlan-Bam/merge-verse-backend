@@ -83,7 +83,9 @@ export class UserService {
       const botToken =
         this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
 
+      this.logger.debug('Validating Telegram initData...');
       const parsedData = validateTelegramWebAppData(data.initData, botToken);
+      this.logger.debug(`Telegram user authenticated: ${parsedData.user.id}`);
 
       if (!parsedData.user || !parsedData.user.id) {
         throw new HttpException('Invalid user data', 400);
