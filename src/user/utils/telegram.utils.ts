@@ -129,11 +129,6 @@ export function validateTelegramWebAppData(
     decodedInitData = decodeURIComponent(initData);
   }
 
-  // Check if this is Login Widget data (has signature field)
-  if (decodedInitData.includes('signature=')) {
-    return validateTelegramLoginWidget(initData, botToken);
-  }
-
   const params: Map<string, string> = new Map();
   const pairs = decodedInitData.split('&');
 

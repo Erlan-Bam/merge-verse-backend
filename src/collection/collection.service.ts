@@ -43,6 +43,7 @@ export class CollectionService {
   }
 
   private async loadCollectionVisibility(): Promise<void> {
+    await this.prisma.ensureConnected();
     try {
       const settings = await this.prisma.systemSettings.findUnique({
         where: { name: SystemSettingsName.COLLECTION_VISIBLE },
