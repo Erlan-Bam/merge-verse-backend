@@ -187,7 +187,8 @@ export class GiveawayController {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Number of latest giveaways to fetch winners from (default: 10)',
+    description:
+      'Number of latest giveaways to fetch winners from (default: 10)',
     example: 10,
   })
   @ApiResponse({
