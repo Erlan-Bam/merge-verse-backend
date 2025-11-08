@@ -26,7 +26,10 @@ export class PackService {
         const startOfActiveAt = new Date(user.activeAt).setHours(0, 0, 0, 0);
 
         if (startOfActiveAt === startOfToday) {
-          throw new HttpException('Daily pack already claimed today', 400);
+          return {
+            streak: user.streak,
+            pack: [],
+          };
         }
       }
 
@@ -70,11 +73,8 @@ export class PackService {
         );
       });
 
-      return { pack };
+      return { pack: pack, streak: isStreak ? 7 : user.streak + 1 };
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
       this.logger.log(
         `Error in getting free pack for user ${userId}: ${error.message}`,
       );
