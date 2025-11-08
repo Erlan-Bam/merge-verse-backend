@@ -90,12 +90,14 @@ enum ReferralSettingsName {
 model User {
   id         String   @id @default(uuid())
   telegramId String   @unique
+  username   String?
   role       Role     @default(USER)
   balance    Decimal  @default(0)
   streak     Int      @default(0)
   isBanned   Boolean  @default(false)
   referredBy String?
   cryptoWallet String?
+  photo      String?
 
   activeAt   DateTime?
   createdAt  DateTime @default(now())

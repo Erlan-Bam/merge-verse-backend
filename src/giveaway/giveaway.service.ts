@@ -305,6 +305,8 @@ export class GiveawayService implements OnModuleInit {
         select: {
           id: true,
           telegramId: true,
+          photo: true,
+          username: true,
           winnings: {
             where: winnerWhere,
             include: {
@@ -315,6 +317,7 @@ export class GiveawayService implements OnModuleInit {
                       id: true,
                       name: true,
                       rarity: true,
+                      url: true,
                     },
                   },
                 },
@@ -346,6 +349,8 @@ export class GiveawayService implements OnModuleInit {
           user: {
             id: user?.id,
             telegramId: user?.telegramId,
+            photo: user?.photo,
+            username: user?.username,
           },
           totalWins: stat._count.userId,
           winsByRarity,

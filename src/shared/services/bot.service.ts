@@ -53,11 +53,31 @@ Click the button below to launch the game!
 
       const telegramId = ctx.from.id;
 
+      // Get user photo from Telegram
+      let photo: string | null = null;
+      try {
+        const photos = await ctx.api.getUserProfilePhotos(telegramId, {
+          limit: 1,
+        });
+        if (photos.total_count > 0) {
+          const fileId = photos.photos[0][0].file_id;
+          const file = await ctx.api.getFile(fileId);
+          const token =
+            this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
+          photo = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Failed to fetch photo for user ${telegramId}:`,
+          error,
+        );
+      }
+
       await Promise.all([
         await this.prisma.user.upsert({
           where: { telegramId: telegramId.toString() },
-          update: {},
-          create: { telegramId: telegramId.toString() },
+          update: { photo: photo },
+          create: { telegramId: telegramId.toString(), photo: photo },
         }),
         await ctx.reply(welcomeMessage, {
           reply_markup: keyboard,
