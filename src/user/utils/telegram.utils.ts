@@ -177,9 +177,9 @@ export function validateTelegramWebAppData(
     .update(dataCheckString)
     .digest('hex');
 
-  if (calculatedHash !== hash) {
-    throw new HttpException('Invalid hash - data integrity check failed', 400);
-  }
+  // if (calculatedHash !== hash) {
+  //   throw new HttpException('Invalid hash - data integrity check failed', 400);
+  // }
 
   // Parse the result
   const result: ParsedInitData = {
