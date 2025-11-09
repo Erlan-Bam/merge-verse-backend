@@ -108,6 +108,7 @@ model User {
   referrals        User[]   @relation("UserReferrals")
 
   inventory        Item[]
+  craft            CraftItem[]
   auctions         Auction[]
   bids             Bid[]
   payments         Payment[]
@@ -143,6 +144,7 @@ model Gift {
   updatedAt DateTime    @updatedAt
 
   inventory  Item[]
+  craft      CraftItem[]
   auctions   Auction[]
   giveaways  Giveaway[]
   entries    Entry[]
@@ -163,6 +165,26 @@ model Item {
   gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@unique([userId, giftId, level, isTradeable])
+  @@index([userId])
+  @@index([giftId])
+}
+
+model CraftItem {
+  id         String   @id @default(uuid())
+  userId     String
+  giftId     String
+  level      Level
+  isTradeable Boolean
+  positionX  Int      // 0-15 for 16x16 grid
+  positionY  Int      // 0-15 for 16x16 grid
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, positionX, positionY])
   @@index([userId])
   @@index([giftId])
 }

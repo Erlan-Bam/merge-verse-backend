@@ -12,6 +12,7 @@ import { PrismaService } from 'src/shared/services/prisma.service';
 import { CraftCardDto } from './dto/craft-card.dto';
 import { ReferralService } from 'src/shared/services/referral.service';
 import { isVisible } from './types/is-visible.types';
+import { MoveToCraftTableDto } from './dto/move-to-craft-table.dto';
 
 @Injectable()
 export class CollectionService {
@@ -576,5 +577,104 @@ export class CollectionService {
     ];
     const index = levels.indexOf(level);
     return levels[index + 1];
+  }
+
+  async moveToCraftTable(userId: string, data: MoveToCraftTableDto) {
+    try {
+      // Check if the position is already occupied
+      const craftItem = await this.prisma.craftItem.findUnique({
+        where: {
+          userId_positionX_positionY: {
+            userId: userId,
+            positionX: data.positionX,
+            positionY: data.positionY,
+          },
+        },
+      });
+
+      if (craftItem) {
+        throw new HttpException(
+          'Position is already occupied on the craft table',
+          400,
+        );
+      }
+
+      // Find the item in the user's inventory
+      const item = await this.prisma.item.findUnique({
+        where: { id: data.itemId, userId: userId },
+        select: {
+          id: true,
+          giftId: true,
+          level: true,
+          quantity: true,
+          isTradeable: true,
+        },
+      });
+
+      if (!item) {
+        throw new HttpException('Item not found in inventory', 404);
+      }
+
+      if (item.quantity < 1) {
+        throw new HttpException('Insufficient quantity', 400);
+      }
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        if (item.quantity === 1) {
+          await tx.item.delete({ where: { id: item.id } });
+        } else {
+          await tx.item.update({
+            where: { id: item.id },
+            data: { quantity: { decrement: 1 } },
+          });
+        }
+
+        const craftItem = await tx.craftItem.create({
+          data: {
+            userId: userId,
+            giftId: item.giftId,
+            level: item.level,
+            isTradeable: item.isTradeable,
+            positionX: data.positionX,
+            positionY: data.positionY,
+          },
+          include: {
+            gift: true,
+          },
+        });
+
+        return craftItem;
+      });
+
+      return {
+        success: true,
+        message: 'Item moved to craft table successfully',
+        craftItem: result,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to move item to craft table: ', error);
+      throw new HttpException('Moving item to craft table failed', 500);
+    }
+  }
+
+  async getCraftTable(userId: string) {
+    try {
+      const craftTable = await this.prisma.craftItem.findMany({
+        where: { userId: userId },
+        include: {
+          gift: true,
+        },
+        orderBy: [{ positionY: 'asc' }, { positionX: 'asc' }],
+      });
+
+      return {
+        craftTable: craftTable,
+        gridSize: 16,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get craft table: ', error);
+      throw new HttpException('Craft table retrieval failed', 500);
+    }
   }
 }

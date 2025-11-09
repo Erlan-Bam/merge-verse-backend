@@ -12,6 +12,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { CraftCardDto } from './dto/craft-card.dto';
 import { VerticalPrizeDto } from './dto/vertical-prize.dto';
 import { HorizontalPrizeDto } from './dto/horizontal-prize.dto';
+import { MoveToCraftTableDto } from './dto/move-to-craft-table.dto';
 
 @Controller('collection')
 @ApiTags('Collection')
@@ -331,5 +332,133 @@ export class CollectionController {
   })
   async fullPrize(@User('id') userId: string) {
     return this.collectionService.getFullPrize(userId);
+  }
+
+  @Post('craft-table/move')
+  @ApiOperation({
+    summary: 'Move item from inventory to craft table',
+    description:
+      'Moves one item from the user\'s inventory to their personal 16x16 craft table at the specified position. The item will be removed from inventory (quantity decremented by 1 or deleted if quantity is 1) and placed on the craft table.',
+  })
+  @ApiBody({ type: MoveToCraftTableDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Item moved to craft table successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the move was successful',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Success message',
+          example: 'Item moved to craft table successfully',
+        },
+        craftTableItem: {
+          type: 'object',
+          description: 'The newly created craft table item',
+          properties: {
+            id: { type: 'string', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' },
+            userId: { type: 'string' },
+            giftId: { type: 'string' },
+            level: { type: 'string', enum: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'] },
+            isTradeable: { type: 'boolean' },
+            positionX: { type: 'number', example: 5 },
+            positionY: { type: 'number', example: 8 },
+            gift: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] },
+                url: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Position already occupied or insufficient quantity',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - Item not found in inventory',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async moveToCraftTable(
+    @User('id') userId: string,
+    @Body() data: MoveToCraftTableDto,
+  ) {
+    return this.collectionService.moveToCraftTable(userId, data);
+  }
+
+  @Get('craft-table')
+  @ApiOperation({
+    summary: 'Get user\'s craft table',
+    description:
+      'Retrieves all items currently placed on the user\'s 16x16 craft table with their positions and details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Craft table retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        craftTable: {
+          type: 'array',
+          description: 'Array of items on the craft table',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              userId: { type: 'string' },
+              giftId: { type: 'string' },
+              level: { type: 'string', enum: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'] },
+              isTradeable: { type: 'boolean' },
+              positionX: { type: 'number' },
+              positionY: { type: 'number' },
+              gift: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] },
+                  url: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        gridSize: {
+          type: 'number',
+          description: 'Size of the craft table grid (always 16 for 16x16)',
+          example: 16,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async getCraftTable(@User('id') userId: string) {
+    return this.collectionService.getCraftTable(userId);
   }
 }
