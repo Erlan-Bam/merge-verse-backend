@@ -143,11 +143,13 @@ export class UserController {
     status: 500,
     description: 'Internal server error',
   })
+  @UseGuards(AuthGuard('jwt'), UserGuard)
   async getCollection(@User('id') userId: string) {
     return this.collectionService.getCollection(userId);
   }
 
   @Get('collection/history')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
   async getCollectionHistory(@User('id') userId: string) {
     return this.userService.getCollectionHistory(userId);
   }
