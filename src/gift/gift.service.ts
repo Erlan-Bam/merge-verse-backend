@@ -91,6 +91,7 @@ export class GiftService {
               id: true,
               rarity: true,
               name: true,
+              url: true,
             },
           },
         },
