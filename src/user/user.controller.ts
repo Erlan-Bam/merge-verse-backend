@@ -240,7 +240,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Resend verification code',
     description:
-      'Resends a new verification code to the user\'s existing email address. This endpoint can only be used if the user already has an email associated with their account that is not yet verified.',
+      "Resends a new verification code to the user's existing email address. This endpoint can only be used if the user already has an email associated with their account that is not yet verified.",
   })
   @ApiResponse({
     status: 201,
