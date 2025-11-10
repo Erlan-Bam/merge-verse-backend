@@ -21,6 +21,7 @@ import { ToggleCollectionVisibleDto } from './dto/toggle-collection-visible.dto'
 import { ArchiveUserItemsDto } from './dto/archive-items.dto';
 import { ToggleUserBanDto } from './dto/toggle-user-ban.dto';
 import { DeleteUserDto } from './dto/delete-user.dto';
+import { UpdateUserBalanceDto } from './dto/update-user-balance.dto';
 
 @Controller('admin')
 @ApiTags('Admin')
@@ -478,5 +479,88 @@ export class AdminController {
   })
   async deleteUser(@Body() data: DeleteUserDto) {
     return this.adminService.deleteUser(data.userId);
+  }
+
+  @Patch('user/balance')
+  @ApiOperation({
+    summary: 'Update user balance',
+    description:
+      'Update the balance of a specific user. This allows admins to manually adjust user balances.',
+  })
+  @ApiBody({ type: UpdateUserBalanceDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User balance updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        user: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              example: '550e8400-e29b-41d4-a716-446655440000',
+            },
+            telegramId: { type: 'string', example: '123456789' },
+            balance: { type: 'string', example: '1000.5' },
+          },
+        },
+        oldBalance: { type: 'string', example: '500.0' },
+        newBalance: { type: 'string', example: '1000.5' },
+        message: {
+          type: 'string',
+          example: 'User 123456789 balance updated successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async updateUserBalance(@Body() data: UpdateUserBalanceDto) {
+    return this.adminService.updateUserBalance(data.userId, data.balance);
+  }
+
+  @Post('user/balance/reset-all')
+  @ApiOperation({
+    summary: 'Reset all user balances',
+    description:
+      'Reset the balance of all users to 0. This is a destructive operation that affects all users in the system. Use with extreme caution.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All user balances reset successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        affectedUsers: { type: 'number', example: 150 },
+        message: {
+          type: 'string',
+          example: 'Successfully reset balances for 150 users',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async resetAllBalances() {
+    return this.adminService.resetAllBalances();
   }
 }

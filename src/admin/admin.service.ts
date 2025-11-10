@@ -541,4 +541,77 @@ export class AdminService {
       );
     }
   }
+
+  async updateUserBalance(userId: string, balance: number) {
+    try {
+      // Verify user exists
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          balance: true,
+        },
+      });
+
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      const oldBalance = user.balance;
+
+      // Update user balance
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: { balance },
+        select: {
+          id: true,
+          telegramId: true,
+          balance: true,
+        },
+      });
+
+      this.logger.log(
+        `User ${updatedUser.telegramId} balance updated from ${oldBalance} to ${balance}`,
+      );
+
+      return {
+        success: true,
+        user: updatedUser,
+        oldBalance: oldBalance.toString(),
+        newBalance: updatedUser.balance.toString(),
+        message: `User ${updatedUser.telegramId} balance updated successfully`,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to update user balance:', error);
+      throw new HttpException(
+        'Failed to update user balance',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async resetAllBalances() {
+    try {
+      // Reset all users' balances to 0
+      const result = await this.prisma.user.updateMany({
+        data: { balance: 0 },
+      });
+
+      this.logger.log(`Reset balances for ${result.count} users to 0`);
+
+      return {
+        success: true,
+        affectedUsers: result.count,
+        message: `Successfully reset balances for ${result.count} users`,
+      };
+    } catch (error) {
+      this.logger.error('Failed to reset all balances:', error);
+      throw new HttpException(
+        'Failed to reset all balances',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
