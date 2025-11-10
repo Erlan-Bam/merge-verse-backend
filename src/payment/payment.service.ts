@@ -11,8 +11,10 @@ import {
 import { ReferralService } from 'src/shared/services/referral.service';
 import { CreatePayoutDto } from './dto/create-payout.dto';
 import { InitiatePayoutDto } from './dto/initiate-payout.dto';
+import { InitiateTonPaymentDto } from './dto/initiate-ton-payment.dto';
 import { EmailService } from 'src/shared/services/email.service';
 import * as crypto from 'crypto';
+import { TonService } from './services/ton.service';
 
 @Injectable()
 export class PaymentService {
@@ -27,6 +29,7 @@ export class PaymentService {
     private configService: ConfigService,
     private referralService: ReferralService,
     private emailService: EmailService,
+    private tonService: TonService,
   ) {
     this.SUCCESS_URL = this.configService.get<string>('PAYMENT_SUCCESS_URL');
     this.CANCEL_URL = this.configService.get<string>('PAYMENT_CANCEL_URL');
@@ -60,6 +63,29 @@ export class PaymentService {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to create invoice:', error);
       throw new HttpException('Failed to create invoice', 500);
+    }
+  }
+
+  async initiateTonPayment(userId: string, data: InitiateTonPaymentDto) {
+    try {
+      const usd = await this.tonService.convertToUSD(data.amount);
+
+      const payment = await this.prisma.payment.create({
+        data: {
+          userId: userId,
+          amount: usd,
+          provider: Provider.TON,
+          status: PaymentStatus.PENDING,
+        },
+      });
+
+      return {
+        payment: payment,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to initiate TON payment:', error);
+      throw new HttpException('Failed to initiate TON payment', 500);
     }
   }
 
