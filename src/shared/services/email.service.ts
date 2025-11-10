@@ -12,10 +12,9 @@ export class EmailService {
     const EMAIL_PASS = this.configService.getOrThrow<string>('EMAIL_PASS');
 
     this.transporter = nodemailer.createTransport({
-      pool: true,
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false,
       auth: {
         user: EMAIL_USER,
         pass: EMAIL_PASS,
@@ -23,9 +22,9 @@ export class EmailService {
       tls: {
         rejectUnauthorized: false,
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000, // 10 seconds
-      socketTimeout: 30000, // 30 seconds
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
     });
 
     // Verify connection on startup
@@ -77,14 +76,11 @@ export class EmailService {
     amount: number,
   ): Promise<void> {
     try {
-      const appName =
-        this.configService.get<string>('APP_NAME') || 'MergeVerse';
-
       const mailOptions = {
-        from: `"${appName}" <${this.configService.get<string>('EMAIL_USER')}>`,
+        from: `MergeVerse <${this.configService.get<string>('EMAIL_USER')}>`,
         to: email,
-        subject: `Payout Confirmation Code - ${appName}`,
-        html: this.generatePayoutCodeEmailHTML(code, amount, appName),
+        subject: `Payout Confirmation Code - MergeVerse`,
+        html: this.generatePayoutCodeEmailHTML(code, amount, 'MergeVerse'),
       };
 
       await this.transporter.sendMail(mailOptions);
