@@ -181,37 +181,32 @@ export class UserService {
       // Generate a 6-digit verification code
       const verificationCode = crypto.randomInt(100000, 999999).toString();
 
-      // Wrap email creation and sending in a transaction
-      const result = await this.prisma.$transaction(async (prisma) => {
-        // Create email record with verification code
-        const email = await prisma.email.create({
-          data: {
-            userId,
-            email: createEmailDto.email,
-            code: verificationCode,
-            isVerified: false,
-          },
-        });
-
-        // Send verification email with timeout
-        const emailTimeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Email sending timeout')), 10000),
-        );
-
-        await Promise.race([
-          this.emailService.sendVerificationEmail(
-            createEmailDto.email,
-            verificationCode,
-          ),
-          emailTimeout,
-        ]);
-
-        return email;
+      // Create email record with verification code
+      const email = await this.prisma.email.create({
+        data: {
+          userId,
+          email: createEmailDto.email,
+          code: verificationCode,
+          isVerified: false,
+        },
       });
+
+      // Send verification email with timeout
+      const emailTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email sending timeout')), 10000),
+      );
+
+      await Promise.race([
+        this.emailService.sendVerificationEmail(
+          createEmailDto.email,
+          verificationCode,
+        ),
+        emailTimeout,
+      ]);
 
       return {
         message: 'Verification code sent to your email',
-        email: result.email,
+        email: email.email,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -244,35 +239,30 @@ export class UserService {
       // Generate a new 6-digit verification code
       const verificationCode = crypto.randomInt(100000, 999999).toString();
 
-      // Wrap code update and sending in a transaction
-      const result = await this.prisma.$transaction(async (prisma) => {
-        // Update email record with new verification code
-        const updatedEmail = await prisma.email.update({
-          where: { userId },
-          data: {
-            code: verificationCode,
-          },
-        });
-
-        // Send verification email with timeout
-        const emailTimeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Email sending timeout')), 10000),
-        );
-
-        await Promise.race([
-          this.emailService.sendVerificationEmail(
-            emailRecord.email,
-            verificationCode,
-          ),
-          emailTimeout,
-        ]);
-
-        return updatedEmail;
+      // Update email record with new verification code
+      await this.prisma.email.update({
+        where: { userId },
+        data: {
+          code: verificationCode,
+        },
       });
+
+      // Send verification email with timeout
+      const emailTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email sending timeout')), 10000),
+      );
+
+      await Promise.race([
+        this.emailService.sendVerificationEmail(
+          emailRecord.email,
+          verificationCode,
+        ),
+        emailTimeout,
+      ]);
 
       return {
         message: 'Verification code resent to your email',
-        email: result.email,
+        email: emailRecord.email,
       };
     } catch (error) {
       if (error instanceof HttpException) {
