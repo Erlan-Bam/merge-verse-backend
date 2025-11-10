@@ -330,4 +330,7 @@ export class PaymentController {
       signature,
     );
   }
+
+  @Post('ton/webhook')
+  async tonWebhook(@Body() data: any) {}
 }
