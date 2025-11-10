@@ -37,7 +37,10 @@ export class EmailService {
       await this.transporter.verify();
       this.logger.log('Email service connected successfully');
     } catch (error) {
-      this.logger.error('Email service connection failed:', error.stack || error);
+      this.logger.error(
+        'Email service connection failed:',
+        error.stack || error,
+      );
       this.logger.warn('Email sending may not work properly');
     }
   }
