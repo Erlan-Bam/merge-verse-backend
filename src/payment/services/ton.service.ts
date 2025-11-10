@@ -1,9 +1,10 @@
-import { Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TonApiClient } from '@ton-api/client';
 import { Address } from '@ton/core';
 
+@Injectable()
 export class TonService implements OnModuleInit {
   private price: number;
   private address: Address;
