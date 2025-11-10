@@ -123,9 +123,9 @@ describe('EmailService', () => {
       const email = 'user@example.com';
       const code = '123456';
 
-      await expect(
-        service.sendVerificationEmail(email, code),
-      ).rejects.toThrow('Failed to send verification email');
+      await expect(service.sendVerificationEmail(email, code)).rejects.toThrow(
+        'Failed to send verification email',
+      );
     });
 
     it('should use default app name if not configured', async () => {
