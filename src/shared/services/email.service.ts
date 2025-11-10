@@ -27,21 +27,7 @@ export class EmailService {
       socketTimeout: 30000,
     });
 
-    // Verify connection on startup
-    this.verifyConnection();
-  }
-
-  private async verifyConnection(): Promise<void> {
-    try {
-      await this.transporter.verify();
-      this.logger.log('Email service connected successfully');
-    } catch (error) {
-      this.logger.error(
-        'Email service connection failed:',
-        error.stack || error,
-      );
-      this.logger.warn('Email sending may not work properly');
-    }
+    this.logger.log('Email service configured (using SMTP)');
   }
 
   async sendVerificationEmail(email: string, code: string): Promise<void> {

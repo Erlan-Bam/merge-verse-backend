@@ -236,7 +236,7 @@ export class UserController {
 
   @Post('email/resend-code')
   @UseGuards(AuthGuard('jwt'), UserGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT')
   @ApiOperation({
     summary: 'Resend verification code',
     description:
