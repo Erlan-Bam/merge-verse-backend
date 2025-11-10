@@ -210,6 +210,55 @@ export class UserService {
     }
   }
 
+  async resendVerificationCode(userId: string) {
+    try {
+      // Find the user's email record
+      const emailRecord = await this.prisma.email.findUnique({
+        where: { userId },
+      });
+
+      if (!emailRecord) {
+        throw new HttpException(
+          'No email found for this user. Please create an email first',
+          404,
+        );
+      }
+
+      // Check if email is already verified
+      if (emailRecord.isVerified) {
+        throw new HttpException('Email is already verified', 400);
+      }
+
+      // Generate a new 6-digit verification code
+      const verificationCode = crypto.randomInt(100000, 999999).toString();
+
+      // Update email record with new verification code
+      await this.prisma.email.update({
+        where: { userId },
+        data: {
+          code: verificationCode,
+        },
+      });
+
+      // Send verification email
+      await this.emailService.sendVerificationEmail(
+        emailRecord.email,
+        verificationCode,
+      );
+
+      return {
+        message: 'Verification code resent to your email',
+        email: emailRecord.email,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Failed to resend verification code: ', error);
+      throw new HttpException('Failed to resend verification code', 500);
+    }
+  }
+
   async verifyEmail(userId: string, verifyEmailDto: VerifyEmailDto) {
     try {
       // Find the user's email record

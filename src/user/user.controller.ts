@@ -234,6 +234,56 @@ export class UserController {
     }
   }
 
+  @Post('email/resend-code')
+  @UseGuards(AuthGuard('jwt'), UserGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Resend verification code',
+    description:
+      'Resends a new verification code to the user\'s existing email address. This endpoint can only be used if the user already has an email associated with their account that is not yet verified.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Verification code resent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Verification code resent to your email',
+        },
+        email: {
+          type: 'string',
+          example: 'user@example.com',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Email is already verified',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - No email found for this user',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async resendVerificationCode(@User('id') userId: string) {
+    try {
+      return await this.userService.resendVerificationCode(userId);
+    } catch (error) {
+      this.logger.error('Failed to resend verification code: ', error);
+      throw error;
+    }
+  }
+
   @Post('email/verify')
   @UseGuards(AuthGuard('jwt'), UserGuard)
   @ApiBearerAuth()
