@@ -191,11 +191,18 @@ export class UserService {
         },
       });
 
-      // Send verification email
-      await this.emailService.sendVerificationEmail(
-        createEmailDto.email,
-        verificationCode,
+      // Send verification email with timeout
+      const emailTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email sending timeout')), 30000),
       );
+
+      await Promise.race([
+        this.emailService.sendVerificationEmail(
+          createEmailDto.email,
+          verificationCode,
+        ),
+        emailTimeout,
+      ]);
 
       return {
         message: 'Verification code sent to your email',
@@ -240,11 +247,18 @@ export class UserService {
         },
       });
 
-      // Send verification email
-      await this.emailService.sendVerificationEmail(
-        emailRecord.email,
-        verificationCode,
+      // Send verification email with timeout
+      const emailTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email sending timeout')), 30000),
       );
+
+      await Promise.race([
+        this.emailService.sendVerificationEmail(
+          emailRecord.email,
+          verificationCode,
+        ),
+        emailTimeout,
+      ]);
 
       return {
         message: 'Verification code resent to your email',

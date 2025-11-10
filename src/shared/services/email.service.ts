@@ -23,7 +23,23 @@ export class EmailService {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000, // 10 seconds
+      socketTimeout: 30000, // 30 seconds
     });
+
+    // Verify connection on startup
+    this.verifyConnection();
+  }
+
+  private async verifyConnection(): Promise<void> {
+    try {
+      await this.transporter.verify();
+      this.logger.log('Email service connected successfully');
+    } catch (error) {
+      this.logger.error('Email service connection failed:', error.stack || error);
+      this.logger.warn('Email sending may not work properly');
+    }
   }
 
   async sendVerificationEmail(email: string, code: string): Promise<void> {
@@ -38,12 +54,15 @@ export class EmailService {
         html: this.generateVerificationEmailHTML(code, appName),
       };
 
-      await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Verification email sent successfully to ${email}`);
+      this.logger.log(`Attempting to send verification email to ${email}...`);
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(
+        `Verification email sent successfully to ${email}. Message ID: ${info.messageId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to send verification email to ${email}:`,
-        error,
+        error.stack || error,
       );
       throw new Error('Failed to send verification email');
     }
