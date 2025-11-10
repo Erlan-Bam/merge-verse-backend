@@ -181,7 +181,7 @@ export class UserController {
 
   @Post('email')
   @UseGuards(AuthGuard('jwt'), UserGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT')
   @ApiOperation({
     summary: 'Create and verify email',
     description:
