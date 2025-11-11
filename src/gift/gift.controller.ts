@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GiftService } from './gift.service';
 import { User } from 'src/shared/decorator/user.decorator';
 
@@ -9,6 +9,15 @@ export class GiftController {
   constructor(private giftService: GiftService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all gifts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all available gifts',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async getAllGifts() {
     return this.giftService.getAllGifts();
   }
