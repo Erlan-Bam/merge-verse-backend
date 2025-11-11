@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, Query, UseGuards } from '@nestjs/common';
 import { CollectionService } from './collection.service';
 import { User } from 'src/shared/decorator/user.decorator';
 import {
@@ -7,12 +7,14 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CraftCardDto } from './dto/craft-card.dto';
 import { VerticalPrizeDto } from './dto/vertical-prize.dto';
 import { HorizontalPrizeDto } from './dto/horizontal-prize.dto';
 import { MoveToCraftTableDto } from './dto/move-to-craft-table.dto';
+import { GetCraftTableDto } from './dto/get-craft-table.dto';
 
 @Controller('collection')
 @ApiTags('Collection')
@@ -429,9 +431,16 @@ export class CollectionController {
 
   @Get('craft-table')
   @ApiOperation({
-    summary: "Get user's craft table",
+    summary: "Get user's craft table filtered by gift",
     description:
-      "Retrieves all items currently placed on the user's 4x4 craft table with their positions and details.",
+      "Retrieves all items currently placed on the user's 4x4 craft table with their positions and details, filtered by the specified gift ID.",
+  })
+  @ApiQuery({
+    name: 'giftId',
+    required: true,
+    type: String,
+    description: 'UUID of the gift to filter craft table items by',
+    example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   })
   @ApiResponse({
     status: 200,
@@ -445,7 +454,10 @@ export class CollectionController {
           items: {
             type: 'object',
             properties: {
-              id: { type: 'string' },
+              id: {
+                type: 'string',
+                example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+              },
               userId: { type: 'string' },
               giftId: { type: 'string' },
               level: {
@@ -498,7 +510,10 @@ export class CollectionController {
     status: 500,
     description: 'Internal server error',
   })
-  async getCraftTable(@User('id') userId: string) {
-    return this.collectionService.getCraftTable(userId);
+  async getCraftTable(
+    @User('id') userId: string,
+    @Query() query: GetCraftTableDto,
+  ) {
+    return this.collectionService.getCraftTable(userId, query.giftId);
   }
 }

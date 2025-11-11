@@ -658,10 +658,13 @@ export class CollectionService {
     }
   }
 
-  async getCraftTable(userId: string) {
+  async getCraftTable(userId: string, giftId: string) {
     try {
       const craftTable = await this.prisma.craftItem.findMany({
-        where: { userId: userId },
+        where: { 
+          userId: userId,
+          giftId: giftId,
+        },
         include: {
           gift: true,
         },
