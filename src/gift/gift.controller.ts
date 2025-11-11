@@ -7,4 +7,9 @@ import { User } from 'src/shared/decorator/user.decorator';
 @ApiTags('Gift')
 export class GiftController {
   constructor(private giftService: GiftService) {}
+
+  @Get()
+  async getAllGifts() {
+    return this.giftService.getAllGifts();
+  }
 }
