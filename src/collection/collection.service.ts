@@ -661,7 +661,7 @@ export class CollectionService {
   async getCraftTable(userId: string, giftId: string) {
     try {
       const craftTable = await this.prisma.craftItem.findMany({
-        where: { 
+        where: {
           userId: userId,
           giftId: giftId,
         },

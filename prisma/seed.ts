@@ -13,14 +13,11 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Migrating craft table positions from 16x16 to 4x4...');
-  
+
   // Get all craft items with positions that are outside the 4x4 grid (0-3)
   const craftItems = await prisma.craftItem.findMany({
     where: {
-      OR: [
-        { positionX: { gt: 3 } },
-        { positionY: { gt: 3 } },
-      ],
+      OR: [{ positionX: { gt: 3 } }, { positionY: { gt: 3 } }],
     },
   });
 
@@ -42,7 +39,7 @@ async function main() {
     const clampedY = Math.min(Math.max(newPositionY, 0), 3);
 
     console.log(
-      `Updating item ${item.id}: (${item.positionX}, ${item.positionY}) -> (${clampedX}, ${clampedY})`
+      `Updating item ${item.id}: (${item.positionX}, ${item.positionY}) -> (${clampedX}, ${clampedY})`,
     );
 
     try {
@@ -71,7 +68,7 @@ async function main() {
 
             if (!spotTaken) {
               console.log(
-                `  Position conflict! Moving to free spot (${x}, ${y})`
+                `  Position conflict! Moving to free spot (${x}, ${y})`,
               );
               await prisma.craftItem.update({
                 where: { id: item.id },
@@ -87,7 +84,7 @@ async function main() {
 
         if (!foundFreeSpot) {
           console.warn(
-            `  Warning: Could not find free spot for item ${item.id}. Deleting item.`
+            `  Warning: Could not find free spot for item ${item.id}. Deleting item.`,
           );
           await prisma.craftItem.delete({
             where: { id: item.id },

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Logger, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CollectionService } from './collection.service';
 import { User } from 'src/shared/decorator/user.decorator';
 import {
