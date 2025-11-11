@@ -11,26 +11,26 @@ export class MoveToCraftTableDto {
   itemId: string;
 
   @ApiProperty({
-    description: 'X position on the craft table (0-15 for 16x16 grid)',
-    example: 5,
+    description: 'X position on the craft table (0-3 for 4x4 grid)',
+    example: 2,
     type: Number,
     minimum: 0,
-    maximum: 15,
+    maximum: 3,
   })
   @IsInt()
   @Min(0)
-  @Max(15)
+  @Max(3)
   positionX: number;
 
   @ApiProperty({
-    description: 'Y position on the craft table (0-15 for 16x16 grid)',
-    example: 8,
+    description: 'Y position on the craft table (0-3 for 4x4 grid)',
+    example: 3,
     type: Number,
     minimum: 0,
-    maximum: 15,
+    maximum: 3,
   })
   @IsInt()
   @Min(0)
-  @Max(15)
+  @Max(3)
   positionY: number;
 }

@@ -670,7 +670,7 @@ export class CollectionService {
 
       return {
         craftTable: craftTable,
-        gridSize: 16,
+        gridSize: 4,
       };
     } catch (error) {
       this.logger.error('Failed to get craft table: ', error);

@@ -176,8 +176,8 @@ model CraftItem {
   giftId     String
   level      Level
   isTradeable Boolean
-  positionX  Int      // 0-15 for 16x16 grid
-  positionY  Int      // 0-15 for 16x16 grid
+  positionX  Int      // 0-3 for 4x4 grid
+  positionY  Int      // 0-3 for 4x4 grid
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

@@ -338,7 +338,7 @@ export class CollectionController {
   @ApiOperation({
     summary: 'Move item from inventory to craft table',
     description:
-      'Moves one item from the user\'s inventory to their personal 16x16 craft table at the specified position. The item will be removed from inventory (quantity decremented by 1 or deleted if quantity is 1) and placed on the craft table.',
+      "Moves one item from the user's inventory to their personal 4x4 craft table at the specified position. The item will be removed from inventory (quantity decremented by 1 or deleted if quantity is 1) and placed on the craft table.",
   })
   @ApiBody({ type: MoveToCraftTableDto })
   @ApiResponse({
@@ -361,19 +361,40 @@ export class CollectionController {
           type: 'object',
           description: 'The newly created craft table item',
           properties: {
-            id: { type: 'string', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' },
+            id: {
+              type: 'string',
+              example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            },
             userId: { type: 'string' },
             giftId: { type: 'string' },
-            level: { type: 'string', enum: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'] },
+            level: {
+              type: 'string',
+              enum: [
+                'L0',
+                'L1',
+                'L2',
+                'L3',
+                'L4',
+                'L5',
+                'L6',
+                'L7',
+                'L8',
+                'L9',
+                'L10',
+              ],
+            },
             isTradeable: { type: 'boolean' },
-            positionX: { type: 'number', example: 5 },
-            positionY: { type: 'number', example: 8 },
+            positionX: { type: 'number', example: 2 },
+            positionY: { type: 'number', example: 3 },
             gift: {
               type: 'object',
               properties: {
                 id: { type: 'string' },
                 name: { type: 'string' },
-                rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] },
+                rarity: {
+                  type: 'string',
+                  enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                },
                 url: { type: 'string' },
               },
             },
@@ -384,7 +405,8 @@ export class CollectionController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad Request - Position already occupied or insufficient quantity',
+    description:
+      'Bad Request - Position already occupied or insufficient quantity',
   })
   @ApiResponse({
     status: 401,
@@ -407,9 +429,9 @@ export class CollectionController {
 
   @Get('craft-table')
   @ApiOperation({
-    summary: 'Get user\'s craft table',
+    summary: "Get user's craft table",
     description:
-      'Retrieves all items currently placed on the user\'s 16x16 craft table with their positions and details.',
+      "Retrieves all items currently placed on the user's 4x4 craft table with their positions and details.",
   })
   @ApiResponse({
     status: 200,
@@ -426,7 +448,22 @@ export class CollectionController {
               id: { type: 'string' },
               userId: { type: 'string' },
               giftId: { type: 'string' },
-              level: { type: 'string', enum: ['L0', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10'] },
+              level: {
+                type: 'string',
+                enum: [
+                  'L0',
+                  'L1',
+                  'L2',
+                  'L3',
+                  'L4',
+                  'L5',
+                  'L6',
+                  'L7',
+                  'L8',
+                  'L9',
+                  'L10',
+                ],
+              },
               isTradeable: { type: 'boolean' },
               positionX: { type: 'number' },
               positionY: { type: 'number' },
@@ -435,7 +472,10 @@ export class CollectionController {
                 properties: {
                   id: { type: 'string' },
                   name: { type: 'string' },
-                  rarity: { type: 'string', enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] },
+                  rarity: {
+                    type: 'string',
+                    enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                  },
                   url: { type: 'string' },
                 },
               },
@@ -444,8 +484,8 @@ export class CollectionController {
         },
         gridSize: {
           type: 'number',
-          description: 'Size of the craft table grid (always 16 for 16x16)',
-          example: 16,
+          description: 'Size of the craft table grid (always 4 for 4x4)',
+          example: 4,
         },
       },
     },
