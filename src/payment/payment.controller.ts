@@ -39,34 +39,9 @@ export class PaymentController {
     schema: {
       type: 'object',
       properties: {
-        invoiceId: {
-          type: 'string',
-          description: 'Invoice ID',
-        },
-        paymentUrl: {
+        url: {
           type: 'string',
           description: 'URL to complete payment',
-        },
-        paymentAddress: {
-          type: 'string',
-          description: 'Cryptocurrency payment address',
-        },
-        amount: {
-          type: 'number',
-          description: 'Payment amount',
-        },
-        currency: {
-          type: 'string',
-          description: 'Payment currency',
-        },
-        status: {
-          type: 'string',
-          enum: ['PENDING', 'WAITING', 'CONFIRMING', 'CONFIRMED', 'FAILED'],
-        },
-        expiresAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Invoice expiration time',
         },
       },
     },
