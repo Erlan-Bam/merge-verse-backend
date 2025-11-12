@@ -176,6 +176,8 @@ export class CollectionService {
             isTradeable: true,
             giftId: true,
             userId: true,
+            positionX: true,
+            positionY: true,
           },
         }),
       ]);
@@ -202,45 +204,29 @@ export class CollectionService {
         throw new HttpException('Cannot craft beyond maximum level', 400);
       }
 
-      const newItem = await this.prisma.$transaction(async (tx) => {
-        // Delete both craft items
+      const newCraftItem = await this.prisma.$transaction(async (tx) => {
         await tx.craftItem.delete({ where: { id: craftItem1.id } });
         await tx.craftItem.delete({ where: { id: craftItem2.id } });
 
-        // Add result to inventory
-        const existingItem = await tx.item.findUnique({
-          where: {
-            userId_giftId_level_isTradeable: {
-              userId: userId,
-              giftId: craftItem1.giftId,
-              level: nextLevel,
-              isTradeable: isTradeable,
-            },
+        return await tx.craftItem.create({
+          data: {
+            userId: userId,
+            giftId: craftItem2.giftId,
+            level: nextLevel,
+            isTradeable: isTradeable,
+            positionX: craftItem2.positionX,
+            positionY: craftItem2.positionY,
+          },
+          include: {
+            gift: true,
           },
         });
-
-        if (existingItem) {
-          return await tx.item.update({
-            where: { id: existingItem.id },
-            data: { quantity: { increment: 1 } },
-          });
-        } else {
-          return await tx.item.create({
-            data: {
-              userId: userId,
-              giftId: craftItem1.giftId,
-              level: nextLevel,
-              quantity: 1,
-              isTradeable: isTradeable,
-            },
-          });
-        }
       });
 
       return {
         success: true,
         message: 'Card crafted successfully',
-        item: newItem,
+        craftItem: newCraftItem,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
