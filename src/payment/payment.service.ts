@@ -15,6 +15,7 @@ import { InitiateTonPaymentDto } from './dto/initiate-ton-payment.dto';
 import { EmailService } from 'src/shared/services/email.service';
 import * as crypto from 'crypto';
 import { TonService } from './services/ton.service';
+import { TonWebhookDto } from './dto/ton-webhook.dto';
 
 @Injectable()
 export class PaymentService {

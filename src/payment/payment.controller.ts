@@ -307,5 +307,43 @@ export class PaymentController {
   }
 
   @Post('ton/webhook')
-  async tonWebhook(@Body() data: any) {}
+  @ApiOperation({
+    summary: 'TON blockchain webhook',
+    description:
+      'Webhook endpoint for receiving TON blockchain transaction notifications. This endpoint is called when a TON payment is confirmed on the blockchain.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook processed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the webhook was processed successfully',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Response message',
+          example: 'Payment confirmed',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid payload or signature',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - Payment not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async tonWebhook(@Body() data: any) {
+    // return await this.paymentService.tonWebhook(data);
+  }
 }
