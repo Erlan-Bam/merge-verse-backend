@@ -205,14 +205,15 @@ model History {
   id         String   @id @default(uuid())
   userId     String
   giftId     String
+  name       String
+  rarity     Rarity
   level      Level
   quantity   Int
-  isTradeable Boolean
-  itemCreatedAt DateTime
-  itemUpdatedAt DateTime
 
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
+  @@unique([userId, giftId, level])
   @@index([userId])
   @@index([giftId])
 }

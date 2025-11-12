@@ -327,57 +327,76 @@ export class AdminService {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
 
-      let archivedCount = 0;
-      let deletedCount = 0;
-
-      await this.prisma.$transaction(async (tx) => {
-        // Get all items for this specific user
-        const items = await tx.item.findMany({
-          where: { userId },
-        });
-
-        this.logger.log(
-          `Found ${items.length} items to archive for user ${userId}`,
-        );
-
-        if (items.length > 0) {
-          // Copy all items to History table
-          await tx.history.createMany({
-            data: items.map((item) => ({
-              userId: item.userId,
-              giftId: item.giftId,
-              level: item.level,
-              quantity: item.quantity,
-              isTradeable: item.isTradeable,
-              itemCreatedAt: item.createdAt,
-              itemUpdatedAt: item.updatedAt,
-            })),
-          });
-
-          archivedCount = items.length;
-          this.logger.log(
-            `Archived ${archivedCount} items to history for user ${userId}`,
-          );
-
-          // Delete all items for this user
-          const result = await tx.item.deleteMany({
-            where: { userId },
-          });
-
-          deletedCount = result.count;
-          this.logger.log(
-            `Deleted ${deletedCount} items from inventory for user ${userId}`,
-          );
-        }
+      const items = await this.prisma.item.findMany({
+        where: { userId },
+        select: {
+          userId: true,
+          level: true,
+          quantity: true,
+          gift: {
+            select: { id: true, name: true, rarity: true },
+          },
+        },
       });
+
+      this.logger.log(
+        `Found ${items.length} items to archive for user ${userId}`,
+      );
+
+      if (items.length === 0) {
+        return {
+          success: true,
+          userId,
+          telegramId: user.telegramId,
+          archivedCount: 0,
+          deletedCount: 0,
+          message: `No items to archive for user ${user.telegramId}`,
+        };
+      }
+
+      await this.prisma.$transaction(
+        items.map((item) =>
+          this.prisma.history.upsert({
+            where: {
+              userId_giftId_level: {
+                userId: item.userId,
+                giftId: item.gift.id,
+                level: item.level,
+              },
+            },
+            update: {
+              quantity: { increment: item.quantity },
+            },
+            create: {
+              userId: item.userId,
+              giftId: item.gift.id,
+              level: item.level,
+              name: item.gift.name,
+              rarity: item.gift.rarity,
+              quantity: item.quantity,
+            },
+          }),
+        ),
+      );
+
+      const deleted = await this.prisma.item.deleteMany({
+        where: { userId },
+      });
+
+      this.logger.log(
+        `Archived ${items.length} items to history for user ${userId}`,
+      );
+      this.logger.log(
+        `Deleted ${deleted.count} items from inventory for user ${userId}`,
+      );
 
       return {
         success: true,
         userId,
         telegramId: user.telegramId,
-        archivedCount,
-        deletedCount,
-        message: `Successfully archived ${archivedCount} items for user ${user.telegramId}`,
+        archivedCount: items.length,
+        deletedCount: deleted.count,
+        message: `Successfully archived ${items.length} items for user ${user.telegramId}`,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -391,44 +410,64 @@ export class AdminService {
 
   async archiveAllUsersItems() {
     try {
-      let archivedCount = 0;
-      let deletedCount = 0;
-
-      await this.prisma.$transaction(async (tx) => {
-        // Get all items from the Item table
-        const items = await tx.item.findMany();
-
-        this.logger.log(`Found ${items.length} items to archive`);
-
-        if (items.length > 0) {
-          // Copy all items to History table
-          await tx.history.createMany({
-            data: items.map((item) => ({
-              userId: item.userId,
-              giftId: item.giftId,
-              level: item.level,
-              quantity: item.quantity,
-              isTradeable: item.isTradeable,
-              itemCreatedAt: item.createdAt,
-              itemUpdatedAt: item.updatedAt,
-            })),
-          });
-
-          archivedCount = items.length;
-          this.logger.log(`Archived ${archivedCount} items to history`);
-
-          // Delete all items from the Item table
-          const result = await tx.item.deleteMany();
-          deletedCount = result.count;
-          this.logger.log(`Deleted ${deletedCount} items from inventory`);
-        }
+      const items = await this.prisma.item.findMany({
+        select: {
+          userId: true,
+          level: true,
+          quantity: true,
+          gift: {
+            select: { id: true, name: true, rarity: true },
+          },
+        },
       });
+
+      this.logger.log(`Found ${items.length} items to archive`);
+
+      if (items.length === 0) {
+        this.logger.log('No items to process');
+        return {
+          success: true,
+          archivedCount: 0,
+          deletedCount: 0,
+          message: 'No items to archive',
+        };
+      }
+
+      await this.prisma.$transaction(
+        items.map((item) =>
+          this.prisma.history.upsert({
+            where: {
+              userId_giftId_level: {
+                userId: item.userId,
+                giftId: item.gift.id,
+                level: item.level,
+              },
+            },
+            update: {
+              quantity: { increment: item.quantity },
+            },
+            create: {
+              userId: item.userId,
+              giftId: item.gift.id,
+              level: item.level,
+              name: item.gift.name,
+              rarity: item.gift.rarity,
+              quantity: item.quantity,
+            },
+          }),
+        ),
+      );
+
+      const deleted = await this.prisma.item.deleteMany();
+
+      this.logger.log(`Deleted ${deleted.count} items from inventory`);
+      this.logger.log(`Processed ${items.length} history upserts successfully`);
 
       return {
         success: true,
-        archivedCount,
-        deletedCount,
-        message: `Successfully archived all items from ${archivedCount} users`,
+        archivedCount: items.length,
+        deletedCount: deleted.count,
+        message: `Successfully archived all items from users`,
       };
     } catch (error) {
       this.logger.error('Failed to archive all users items:', error);

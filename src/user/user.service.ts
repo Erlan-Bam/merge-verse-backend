@@ -133,16 +133,16 @@ export class UserService {
     try {
       const history = await this.prisma.history.findMany({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ name: 'asc' }, { rarity: 'asc' }, { level: 'asc' }],
       });
 
-      return {
-        history: history,
-      };
+      return history;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
+      this.logger.error('Failed to get collection history: ', error);
+      throw new HttpException('Failed to get collection history', 500);
     }
   }
 

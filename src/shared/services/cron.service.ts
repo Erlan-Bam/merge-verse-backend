@@ -128,39 +128,54 @@ export class CronService {
   @Cron('1 0 1 * *', {
     timeZone: 'UTC',
   })
-  async handleFinishMonthlyGiveaways() {
+  async handleHistory() {
     this.logger.log('Starting monthly giveaway finish task');
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        // Get all items from the Item table
-        const items = await tx.item.findMany();
-
-        this.logger.log(`Found ${items.length} items to archive`);
-
-        if (items.length > 0) {
-          // Copy all items to History table
-          await tx.history.createMany({
-            data: items.map((item) => ({
-              userId: item.userId,
-              giftId: item.giftId,
-              level: item.level,
-              quantity: item.quantity,
-              isTradeable: item.isTradeable,
-              itemCreatedAt: item.createdAt,
-              itemUpdatedAt: item.updatedAt,
-            })),
-          });
-
-          this.logger.log(`Archived ${items.length} items to history`);
-
-          // Delete all items from the Item table
-          const result = await tx.item.deleteMany();
-          this.logger.log(`Deleted ${result.count} items from inventory`);
-        }
+      const items = await this.prisma.item.findMany({
+        select: {
+          userId: true,
+          level: true,
+          quantity: true,
+          gift: {
+            select: { id: true, name: true, rarity: true },
+          },
+        },
       });
 
-      this.logger.log('Monthly giveaway finish task completed successfully');
+      if (items.length === 0) {
+        this.logger.log('No items to process');
+        return;
+      }
+
+      await this.prisma.$transaction(
+        items.map((item) =>
+          this.prisma.history.upsert({
+            where: {
+              userId_giftId_level: {
+                userId: item.userId,
+                giftId: item.gift.id,
+                level: item.level,
+              },
+            },
+            update: {
+              quantity: { increment: item.quantity },
+            },
+            create: {
+              userId: item.userId,
+              giftId: item.gift.id,
+              level: item.level,
+              name: item.gift.name,
+              rarity: item.gift.rarity,
+              quantity: item.quantity,
+            },
+          }),
+        ),
+      );
+
+      const deleted = await this.prisma.item.deleteMany();
+      this.logger.log(`Deleted ${deleted.count} items from inventory`);
+      this.logger.log(`Processed ${items.length} history upserts successfully`);
     } catch (error) {
       this.logger.error('Failed to finish monthly giveaways:', error);
     }
