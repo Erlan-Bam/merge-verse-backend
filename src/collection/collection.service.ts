@@ -157,203 +157,78 @@ export class CollectionService {
 
   async craftCard(userId: string, data: CraftCardDto) {
     try {
-      // First try to find in CraftItem table
       const [craftItem1, craftItem2] = await Promise.all([
         this.prisma.craftItem.findUnique({
-          where: { id: data.item1Id },
-          select: {
-            id: true,
-            level: true,
-            isTradeable: true,
-            giftId: true,
-            userId: true,
-          },
-        }),
-        this.prisma.craftItem.findUnique({
-          where: { id: data.item2Id },
-          select: {
-            id: true,
-            level: true,
-            isTradeable: true,
-            giftId: true,
-            userId: true,
-          },
-        }),
-      ]);
-
-      // If found in CraftItem, use them
-      if (craftItem1 && craftItem2) {
-        if (craftItem1.userId !== userId || craftItem2.userId !== userId) {
-          throw new HttpException('One or both items not found', 404);
-        }
-
-        if (
-          craftItem1.giftId !== craftItem2.giftId ||
-          craftItem1.level !== craftItem2.level
-        ) {
-          throw new HttpException(
-            'Items are not of the same type and level',
-            400,
-          );
-        }
-
-        const level = craftItem1.level;
-        const nextLevel = this.getNextLevel(level);
-        const isTradeable = craftItem1.isTradeable && craftItem2.isTradeable;
-
-        if (!nextLevel) {
-          throw new HttpException('Cannot craft beyond maximum level', 400);
-        }
-
-        const newItem = await this.prisma.$transaction(async (tx) => {
-          // Delete both craft items
-          await tx.craftItem.delete({ where: { id: craftItem1.id } });
-          await tx.craftItem.delete({ where: { id: craftItem2.id } });
-
-          // Add result to inventory
-          const existingItem = await tx.item.findUnique({
-            where: {
-              userId_giftId_level_isTradeable: {
-                userId: userId,
-                giftId: craftItem1.giftId,
-                level: nextLevel,
-                isTradeable: isTradeable,
-              },
-            },
-          });
-
-          if (existingItem) {
-            return await tx.item.update({
-              where: { id: existingItem.id },
-              data: { quantity: { increment: 1 } },
-            });
-          } else {
-            return await tx.item.create({
-              data: {
-                userId: userId,
-                giftId: craftItem1.giftId,
-                level: nextLevel,
-                quantity: 1,
-                isTradeable: isTradeable,
-              },
-            });
-          }
-        });
-
-        return {
-          success: true,
-          message: 'Card crafted successfully',
-          item: newItem,
-        };
-      }
-
-      // Fallback to Item table for inventory crafting
-      const [item1, item2] = await Promise.all([
-        this.prisma.item.findUnique({
           where: { id: data.item1Id, userId: userId },
           select: {
             id: true,
             level: true,
-            quantity: true,
             isTradeable: true,
             giftId: true,
+            userId: true,
           },
         }),
-        this.prisma.item.findUnique({
+        this.prisma.craftItem.findUnique({
           where: { id: data.item2Id, userId: userId },
           select: {
             id: true,
             level: true,
-            quantity: true,
             isTradeable: true,
             giftId: true,
+            userId: true,
           },
         }),
       ]);
 
-      if (!item1 || !item2) {
+      if (!craftItem1 || !craftItem2) {
         throw new HttpException('One or both items not found', 404);
       }
 
-      if (item1.giftId !== item2.giftId || item1.level !== item2.level) {
+      if (
+        craftItem1.giftId !== craftItem2.giftId ||
+        craftItem1.level !== craftItem2.level
+      ) {
         throw new HttpException(
           'Items are not of the same type and level',
           400,
         );
       }
 
-      if (item1.id === item2.id) {
-        if (item1.quantity < 2) {
-          throw new HttpException(
-            'Insufficient quantity for crafting from the same item',
-            400,
-          );
-        }
-      } else {
-        if (item1.quantity < 1 || item2.quantity < 1) {
-          throw new HttpException('Insufficient quantity', 400);
-        }
-      }
-
-      const level = item1.level;
-
+      const level = craftItem1.level;
       const nextLevel = this.getNextLevel(level);
-      const isTradeable = item1.isTradeable && item2.isTradeable;
+      const isTradeable = craftItem1.isTradeable && craftItem2.isTradeable;
+
       if (!nextLevel) {
         throw new HttpException('Cannot craft beyond maximum level', 400);
       }
 
       const newItem = await this.prisma.$transaction(async (tx) => {
-        if (item1.id === item2.id) {
-          if (item1.quantity === 2) {
-            await tx.item.delete({ where: { id: item1.id } });
-          } else {
-            await tx.item.update({
-              where: { id: item1.id },
-              data: { quantity: { decrement: 2 } },
-            });
-          }
-        } else {
-          if (item1.quantity === 1) {
-            await tx.item.delete({ where: { id: item1.id } });
-          } else {
-            await tx.item.update({
-              where: { id: item1.id },
-              data: { quantity: { decrement: 1 } },
-            });
-          }
+        // Delete both craft items
+        await tx.craftItem.delete({ where: { id: craftItem1.id } });
+        await tx.craftItem.delete({ where: { id: craftItem2.id } });
 
-          if (item2.quantity === 1) {
-            await tx.item.delete({ where: { id: item2.id } });
-          } else {
-            await tx.item.update({
-              where: { id: item2.id },
-              data: { quantity: { decrement: 1 } },
-            });
-          }
-        }
-
-        const newItem = await tx.item.findUnique({
+        // Add result to inventory
+        const existingItem = await tx.item.findUnique({
           where: {
             userId_giftId_level_isTradeable: {
               userId: userId,
-              giftId: item1.giftId,
+              giftId: craftItem1.giftId,
               level: nextLevel,
               isTradeable: isTradeable,
             },
           },
         });
 
-        if (newItem) {
+        if (existingItem) {
           return await tx.item.update({
-            where: { id: newItem.id },
+            where: { id: existingItem.id },
             data: { quantity: { increment: 1 } },
           });
         } else {
           return await tx.item.create({
             data: {
               userId: userId,
-              giftId: item1.giftId,
+              giftId: craftItem1.giftId,
               level: nextLevel,
               quantity: 1,
               isTradeable: isTradeable,
