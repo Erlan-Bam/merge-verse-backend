@@ -23,6 +23,7 @@ import { VerticalPrizeDto } from './dto/vertical-prize.dto';
 import { HorizontalPrizeDto } from './dto/horizontal-prize.dto';
 import { MoveToCraftTableDto } from './dto/move-to-craft-table.dto';
 import { GetCraftTableDto } from './dto/get-craft-table.dto';
+import { RemoveFromCraftTableDto } from './dto/remove-from-craft-table.dto';
 
 @Controller('collection')
 @ApiTags('Collection')
@@ -523,5 +524,96 @@ export class CollectionController {
     @Query() query: GetCraftTableDto,
   ) {
     return this.collectionService.getCraftTable(userId, query.giftId);
+  }
+
+  @Post('craft-table/remove')
+  @ApiOperation({
+    summary: 'Remove item from craft table to inventory',
+    description:
+      "Removes an item from the user's craft table and moves it back to their inventory. If an identical item (same gift, level, and tradeable status) already exists in inventory, the quantity will be incremented; otherwise, a new inventory item will be created.",
+  })
+  @ApiBody({ type: RemoveFromCraftTableDto })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Item removed from craft table and moved to inventory successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the removal was successful',
+          example: true,
+        },
+        message: {
+          type: 'string',
+          description: 'Success message',
+          example: 'Item removed from craft table and moved to inventory',
+        },
+        item: {
+          type: 'object',
+          description: 'The inventory item that was created or updated',
+          properties: {
+            id: {
+              type: 'string',
+              example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            },
+            userId: { type: 'string' },
+            giftId: { type: 'string' },
+            level: {
+              type: 'string',
+              enum: [
+                'L0',
+                'L1',
+                'L2',
+                'L3',
+                'L4',
+                'L5',
+                'L6',
+                'L7',
+                'L8',
+                'L9',
+                'L10',
+              ],
+            },
+            quantity: { type: 'number', example: 2 },
+            isTradeable: { type: 'boolean' },
+            gift: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                rarity: {
+                  type: 'string',
+                  enum: ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'],
+                },
+                url: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Not Found - Craft item not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async removeFromCraftTable(
+    @User('id') userId: string,
+    @Body() data: RemoveFromCraftTableDto,
+  ) {
+    return this.collectionService.removeFromCraftTable(
+      userId,
+      data.craftItemId,
+    );
   }
 }

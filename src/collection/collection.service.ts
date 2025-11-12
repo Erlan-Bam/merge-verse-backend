@@ -632,4 +632,64 @@ export class CollectionService {
       throw new HttpException('Craft table retrieval failed', 500);
     }
   }
+
+  async removeFromCraftTable(userId: string, craftItemId: string) {
+    try {
+      // Find the craft item
+      const craftItem = await this.prisma.craftItem.findUnique({
+        where: { id: craftItemId, userId: userId },
+        select: {
+          id: true,
+          giftId: true,
+          level: true,
+          isTradeable: true,
+          userId: true,
+        },
+      });
+
+      if (!craftItem) {
+        throw new HttpException('Craft item not found', 404);
+      }
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Delete the craft item
+        await tx.craftItem.delete({ where: { id: craftItem.id } });
+
+        // Upsert: increment quantity if exists, create with quantity 1 if not
+        const item = await tx.item.upsert({
+          where: {
+            userId_giftId_level_isTradeable: {
+              userId: userId,
+              giftId: craftItem.giftId,
+              level: craftItem.level,
+              isTradeable: craftItem.isTradeable,
+            },
+          },
+          update: {
+            quantity: { increment: 1 },
+          },
+          create: {
+            userId: userId,
+            giftId: craftItem.giftId,
+            level: craftItem.level,
+            isTradeable: craftItem.isTradeable,
+            quantity: 1,
+          },
+          include: { gift: true },
+        });
+
+        return item;
+      });
+
+      return {
+        success: true,
+        message: 'Item removed from craft table and moved to inventory',
+        item: result,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to remove item from craft table: ', error);
+      throw new HttpException('Removing item from craft table failed', 500);
+    }
+  }
 }
