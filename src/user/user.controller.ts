@@ -175,7 +175,7 @@ export class UserController {
   })
   async test() {
     return this.userService.generateToken(
-      'd581bb7e-56b1-4050-bcf2-b6afce518bad',
+      '210ddd67-d412-4901-a1c4-cb51f51c1113',
     );
   }
 
