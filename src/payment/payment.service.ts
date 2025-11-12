@@ -43,22 +43,20 @@ export class PaymentService {
         data: {
           userId: userId,
           amount: data.amount,
-          provider: data.provider,
+          provider: Provider.NOWPAYMENTS,
         },
       });
 
-      if (data.provider === Provider.NOWPAYMENTS) {
-        return await this.nowpaymentService.createInvoice({
-          price_amount: Number((data.amount / 0.99).toFixed(2)),
-          price_currency: 'usd',
-          order_id: payment.id,
-          order_description: 'Merge Verse balance top-up',
-          success_url: this.SUCCESS_URL,
-          cancel_url: this.CANCEL_URL,
-          ipn_callback_url: `${this.CALLBACK_URL}/nowpayment/notification`,
-          is_fee_paid_by_user: true,
-        });
-      }
+      return await this.nowpaymentService.createInvoice({
+        price_amount: Number((data.amount / 0.99).toFixed(2)),
+        price_currency: 'usd',
+        order_id: payment.id,
+        order_description: 'Merge Verse balance top-up',
+        success_url: this.SUCCESS_URL,
+        cancel_url: this.CANCEL_URL,
+        ipn_callback_url: `${this.CALLBACK_URL}/nowpayment/notification`,
+        is_fee_paid_by_user: true,
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to create invoice:', error);
