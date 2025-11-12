@@ -147,6 +147,29 @@ export class CollectionService {
         if (!isComplete) result.isComplete = false;
       }
 
+      // Sort vertical by numeric level (L1 → L10)
+      result.vertical.sort((a, b) => {
+        const levelA = parseInt(a.level.replace('L', ''), 10);
+        const levelB = parseInt(b.level.replace('L', ''), 10);
+        return levelA - levelB;
+      });
+
+      const order: Record<Rarity, number> = {
+        COMMON: 1,
+        RARE: 2,
+        EPIC: 3,
+        LEGENDARY: 4,
+        MYTHIC: 5,
+      };
+
+      result.horizontal.sort((a, b) => {
+        const rarityDiff = order[a.rarity] - order[b.rarity];
+        if (rarityDiff !== 0) return rarityDiff;
+        return a.name.localeCompare(b.name);
+      });
+
+      return result;
+
       return result;
     } catch (error) {
       if (error instanceof HttpException) throw error;
