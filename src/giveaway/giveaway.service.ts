@@ -531,7 +531,7 @@ export class GiveawayService implements OnModuleInit {
                   giftId: true,
                   isTradeable: true,
                   gift: {
-                    select: { rarity: true },
+                    select: { rarity: true, name: true },
                   },
                 },
               },
