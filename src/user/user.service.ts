@@ -133,10 +133,39 @@ export class UserService {
     try {
       const history = await this.prisma.history.findMany({
         where: { userId },
-        orderBy: [{ name: 'asc' }, { rarity: 'asc' }, { level: 'asc' }],
       });
 
-      return history;
+      // Define the sort order for rarity and level
+      const rarity = {
+        COMMON: 1,
+        RARE: 2,
+        EPIC: 3,
+        LEGENDARY: 4,
+        MYTHIC: 5,
+      };
+      const level = {
+        L0: 0,
+        L1: 1,
+        L2: 2,
+        L3: 3,
+        L4: 4,
+        L5: 5,
+        L6: 6,
+        L7: 7,
+        L8: 8,
+        L9: 9,
+        L10: 10,
+      };
+
+      // Sort the history array
+      const sorted = history.sort((a, b) => {
+        const rarityDiff = rarity[a.rarity] - rarity[b.rarity];
+        if (rarityDiff !== 0) return rarityDiff;
+
+        return level[a.level] - level[b.level];
+      });
+
+      return { history: sorted };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
