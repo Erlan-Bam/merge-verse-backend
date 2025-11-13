@@ -150,7 +150,7 @@ export class UserController {
 
   @Get('collection/history')
   @ApiBearerAuth('JWT')
-  @UseGuards(AuthGuard('jwt'), UserGuard)
+  @UseGuards(AuthGuard('jwt'))
   async getCollectionHistory(@User('id') userId: string) {
     return this.userService.getCollectionHistory(userId);
   }
