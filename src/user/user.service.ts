@@ -176,6 +176,7 @@ export class UserService {
             level: level,
             row: giftIndex, // 0-19 for 20 gifts
             column: levelIndex, // 0-9 for L1-L10
+            url: gift.url,
             userId: historyEntry ? userId : null, // null if user doesn't own it
           });
         });
