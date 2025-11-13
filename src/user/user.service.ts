@@ -131,41 +131,57 @@ export class UserService {
 
   async getCollectionHistory(userId: string) {
     try {
-      const history = await this.prisma.history.findMany({
+      // Query all gifts ordered by rarity (COMMON to MYTHIC) then by name
+      const gifts = await this.prisma.gift.findMany({
+        orderBy: [
+          { rarity: 'asc' }, // COMMON, RARE, EPIC, LEGENDARY, MYTHIC
+          { name: 'asc' },
+        ],
+      });
+
+      // Get user's history for quick lookup
+      const userHistory = await this.prisma.history.findMany({
         where: { userId },
       });
 
-      // Define the sort order for rarity and level
-      const rarity = {
-        COMMON: 1,
-        RARE: 2,
-        EPIC: 3,
-        LEGENDARY: 4,
-        MYTHIC: 5,
-      };
-      const level = {
-        L0: 0,
-        L1: 1,
-        L2: 2,
-        L3: 3,
-        L4: 4,
-        L5: 5,
-        L6: 6,
-        L7: 7,
-        L8: 8,
-        L9: 9,
-        L10: 10,
-      };
+      // Create a lookup map for faster access: "giftId-level" -> history entry
+      const historyMap = new Map(
+        userHistory.map((h) => [`${h.giftId}-${h.level}`, h]),
+      );
 
-      // Sort the history array
-      const sorted = history.sort((a, b) => {
-        const rarityDiff = rarity[a.rarity] - rarity[b.rarity];
-        if (rarityDiff !== 0) return rarityDiff;
+      // Define levels L1 to L10
+      const levels = [
+        'L1',
+        'L2',
+        'L3',
+        'L4',
+        'L5',
+        'L6',
+        'L7',
+        'L8',
+        'L9',
+        'L10',
+      ];
 
-        return level[a.level] - level[b.level];
+      // Build the grid: 20 gifts (rows) × 10 levels (columns)
+      const grid = [];
+
+      gifts.forEach((gift, giftIndex) => {
+        levels.forEach((level, levelIndex) => {
+          const historyEntry = historyMap.get(`${gift.id}-${level}`);
+
+          grid.push({
+            name: gift.name,
+            rarity: gift.rarity,
+            level: level,
+            row: giftIndex, // 0-19 for 20 gifts
+            column: levelIndex, // 0-9 for L1-L10
+            userId: historyEntry ? userId : null, // null if user doesn't own it
+          });
+        });
       });
 
-      return { history: sorted };
+      return { history: grid };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
