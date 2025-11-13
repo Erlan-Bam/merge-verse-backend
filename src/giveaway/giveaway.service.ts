@@ -562,6 +562,24 @@ export class GiveawayService implements OnModuleInit {
                   quantity: 1,
                 },
               });
+
+              await tx.history.upsert({
+                where: {
+                  userId_giftId_level: {
+                    userId: entry.user.id,
+                    giftId: entry.giftId,
+                    level: Level.L10,
+                  },
+                },
+                update: {},
+                create: {
+                  userId: entry.user.id,
+                  giftId: entry.giftId,
+                  level: Level.L10,
+                  name: entry.gift.name,
+                  rarity: entry.gift.rarity,
+                },
+              });
             }
             await tx.giveaway.update({
               where: { id: giveawayId },

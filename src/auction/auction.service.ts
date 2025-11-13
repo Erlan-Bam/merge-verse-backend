@@ -239,6 +239,12 @@ export class AuctionService {
             giftId: true,
             level: true,
             start: true,
+            gift: {
+              select: {
+                name: true,
+                rarity: true,
+              },
+            },
           },
         });
 
@@ -262,6 +268,25 @@ export class AuctionService {
               quantity: 1,
             },
           });
+
+          await tx.history.upsert({
+            where: {
+              userId_giftId_level: {
+                userId: wonBid.userId,
+                giftId: auction.giftId,
+                level: auction.level,
+              },
+            },
+            update: {},
+            create: {
+              userId: wonBid.userId,
+              giftId: auction.giftId,
+              level: auction.level,
+              name: auction.gift.name,
+              rarity: auction.gift.rarity,
+            },
+          });
+
           const baseAmount = wonBid.amount.toNumber();
           const finalAmount = Math.ceil(baseAmount * 0.9);
           await tx.user.update({
@@ -297,6 +322,25 @@ export class AuctionService {
               quantity: 1,
             },
           });
+
+          await tx.history.upsert({
+            where: {
+              userId_giftId_level: {
+                userId: auction.userId,
+                giftId: auction.giftId,
+                level: auction.level,
+              },
+            },
+            update: {},
+            create: {
+              userId: auction.userId,
+              giftId: auction.giftId,
+              level: auction.level,
+              name: auction.gift.name,
+              rarity: auction.gift.rarity,
+            },
+          });
+
           await tx.auction.update({
             where: { id: data.auctionId },
             data: {

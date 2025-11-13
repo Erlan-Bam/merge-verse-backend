@@ -51,8 +51,8 @@ export class PackService {
         });
 
         await Promise.all(
-          pack.map((gift) =>
-            tx.item.upsert({
+          pack.map(async (gift) => {
+            await tx.item.upsert({
               where: {
                 userId_giftId_level_isTradeable: {
                   userId,
@@ -71,8 +71,26 @@ export class PackService {
               update: {
                 quantity: { increment: 1 },
               },
-            }),
-          ),
+            });
+
+            await tx.history.upsert({
+              where: {
+                userId_giftId_level: {
+                  userId,
+                  giftId: gift.id,
+                  level: config.level,
+                },
+              },
+              update: {},
+              create: {
+                userId,
+                giftId: gift.id,
+                level: config.level,
+                name: gift.name,
+                rarity: gift.rarity,
+              },
+            });
+          }),
         );
 
         return updated;
@@ -126,8 +144,8 @@ export class PackService {
         });
 
         await Promise.all(
-          pack.map((gift) =>
-            tx.item.upsert({
+          pack.map(async (gift) => {
+            await tx.item.upsert({
               where: {
                 userId_giftId_level_isTradeable: {
                   userId,
@@ -146,8 +164,26 @@ export class PackService {
               update: {
                 quantity: { increment: 1 },
               },
-            }),
-          ),
+            });
+
+            await tx.history.upsert({
+              where: {
+                userId_giftId_level: {
+                  userId,
+                  giftId: gift.id,
+                  level: config.level,
+                },
+              },
+              update: {},
+              create: {
+                userId,
+                giftId: gift.id,
+                level: config.level,
+                name: gift.name,
+                rarity: gift.rarity,
+              },
+            });
+          }),
         );
       });
 

@@ -158,16 +158,13 @@ export class CronService {
                 level: item.level,
               },
             },
-            update: {
-              quantity: { increment: item.quantity },
-            },
+            update: {},
             create: {
               userId: item.userId,
               giftId: item.gift.id,
               level: item.level,
               name: item.gift.name,
               rarity: item.gift.rarity,
-              quantity: item.quantity,
             },
           }),
         ),
