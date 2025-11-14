@@ -67,12 +67,10 @@ export class PaymentService {
 
   async initiateTonPayment(userId: string, data: InitiateTonPaymentDto) {
     try {
-      const usd = await this.tonService.convertToUSD(data.amount);
-
       const payment = await this.prisma.payment.create({
         data: {
           userId: userId,
-          amount: usd,
+          amount: data.amount,
           provider: Provider.TON,
           status: PaymentStatus.PENDING,
         },
@@ -481,6 +479,124 @@ export class PaymentService {
       if (error instanceof HttpException) throw error;
       this.logger.error('Failed to process notification:', error);
       throw new HttpException('Failed to process notification', 500);
+    }
+  }
+
+  async tonWebhook(data: TonWebhookDto) {
+    try {
+      const transactions = await this.tonService.getTransactions(data.lt);
+
+      if (!transactions || transactions.length === 0) {
+        this.logger.warn('No transactions found for the given lt');
+        return { status: 'ok', message: 'No transactions found' };
+      }
+
+      for (const tx of transactions) {
+        if (tx.hash === data.hash) {
+          const ton = Number(tx.inMsg?.value) / 1_000_000_000;
+          const usd = await this.tonService.convertToUSD(ton);
+          const payment = await this.prisma.payment.findFirst({
+            where: {
+              provider: Provider.TON,
+              status: PaymentStatus.PENDING,
+              createdAt: {
+                gte: new Date(Date.now() - 20 * 60 * 1000),
+              },
+              amount: {
+                gte: ton * 0.99,
+                lte: ton * 1.01,
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            include: {
+              user: true,
+            },
+          });
+
+          if (!payment) {
+            this.logger.error(
+              `No matching pending payment found for TON amount: ${ton} TON (${usd} USD)`,
+            );
+            return { status: 'ok', message: 'No matching payment found' };
+          }
+
+          // Process the payment
+          await this.prisma.$transaction(async (tx) => {
+            await tx.payment.update({
+              where: { id: payment.id },
+              data: {
+                status: PaymentStatus.COMPLETED,
+                externalId: data.hash,
+              },
+            });
+
+            // Update user balance
+            await tx.user.update({
+              where: { id: payment.userId },
+              data: {
+                balance: {
+                  increment: payment.amount,
+                },
+              },
+            });
+
+            // Process referral commissions
+            const referrals =
+              await this.referralService.processDepositReferrals(
+                payment.userId,
+                payment.amount.toNumber(),
+              );
+
+            // First level referral (direct referrer) - 4%
+            if (referrals.firstLevel) {
+              await tx.user.update({
+                where: { id: referrals.firstLevel.userId },
+                data: {
+                  balance: { increment: referrals.firstLevel.amount },
+                },
+              });
+
+              this.logger.log(
+                `First level referral: User ${referrals.firstLevel.userId} earned ${referrals.firstLevel.amount} from ${payment.userId}'s TON deposit`,
+              );
+            }
+
+            // Second level referral (referrer of referrer) - 2%
+            if (referrals.secondLevel) {
+              await tx.user.update({
+                where: { id: referrals.secondLevel.userId },
+                data: {
+                  balance: { increment: referrals.secondLevel.amount },
+                },
+              });
+
+              this.logger.log(
+                `Second level referral: User ${referrals.secondLevel.userId} earned ${referrals.secondLevel.amount} from ${payment.userId}'s TON deposit`,
+              );
+            }
+
+            this.logger.log(
+              `TON payment completed: ${payment.id}, User: ${payment.userId}, Amount: ${payment.amount} USD (${ton} TON)`,
+            );
+          });
+
+          return {
+            status: 'ok',
+            message: 'TON payment processed successfully',
+          };
+        }
+      }
+
+      this.logger.warn(
+        `Transaction hash ${data.hash} not found in fetched transactions`,
+      );
+      return { status: 'ok', message: 'Transaction not found' };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('Failed to process TON webhook:', error);
+      throw new HttpException('Failed to process TON webhook', 500);
     }
   }
 }

@@ -52,15 +52,15 @@ export class TonService implements OnModuleInit {
     return this.price;
   }
 
-  async getTransactions(lt: number) {
+  async getTransactions(lt: bigint) {
     try {
       const response =
         await this.ton.blockchain.getBlockchainAccountTransactions(
           this.address,
-          { after_lt: BigInt(lt) },
+          { after_lt: lt, limit: 20 },
         );
 
-      return response;
+      return response.transactions;
     } catch (error) {
       this.logger.error('Failed to fetch TON transactions', error);
       return null;
