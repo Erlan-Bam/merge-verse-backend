@@ -482,7 +482,10 @@ export class CollectionService {
           const referralBonus = this.referralService.getFullCollectionBonus();
           await tx.user.update({
             where: { id: user.referredBy },
-            data: { balance: { increment: referralBonus } },
+            data: {
+              balance: { increment: referralBonus },
+              firstReferral: { increment: referralBonus },
+            },
           });
 
           this.logger.log(

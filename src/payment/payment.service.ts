@@ -363,6 +363,7 @@ export class PaymentService {
             where: { id: referrals.firstLevel.userId },
             data: {
               balance: { increment: referrals.firstLevel.amount },
+              firstReferral: { increment: referrals.firstLevel.amount },
             },
           });
 
@@ -377,6 +378,7 @@ export class PaymentService {
             where: { id: referrals.secondLevel.userId },
             data: {
               balance: { increment: referrals.secondLevel.amount },
+              secondReferral: { increment: referrals.secondLevel.amount },
             },
           });
 
@@ -555,6 +557,7 @@ export class PaymentService {
                 where: { id: referrals.firstLevel.userId },
                 data: {
                   balance: { increment: referrals.firstLevel.amount },
+                  firstReferral: { increment: referrals.firstLevel.amount },
                 },
               });
 
@@ -569,6 +572,7 @@ export class PaymentService {
                 where: { id: referrals.secondLevel.userId },
                 data: {
                   balance: { increment: referrals.secondLevel.amount },
+                  secondReferral: { increment: referrals.secondLevel.amount },
                 },
               });
 

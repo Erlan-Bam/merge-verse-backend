@@ -99,6 +99,8 @@ model User {
   referredBy String?
   cryptoWallet String?
   photo      String?
+  firstReferral  Decimal  @default(0)
+  secondReferral Decimal  @default(0)
 
   activeAt   DateTime?
   createdAt  DateTime @default(now())
